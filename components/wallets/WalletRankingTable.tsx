@@ -53,12 +53,15 @@ export function WalletRankingTable({ wallets }: { wallets: WalletRanking[] }) {
             {wallets.map((w) => (
               <tr
                 key={w.walletAddress}
-                className="group border-b border-line-soft transition-colors duration-100 last:border-b-0 hover:bg-surface-2"
+                className="group relative border-b border-line-soft transition-colors duration-100 last:border-b-0 hover:bg-surface-2"
               >
                 <td className="py-2 pl-4">
+                  {/* Stretched over the whole row, matching the profit board.
+                      The row highlights on hover, so the click target has to be
+                      the row and not just the address. */}
                   <Link
                     href={`/w/${w.walletAddress}`}
-                    className="tnum text-body text-ink transition-colors duration-100 group-hover:text-green"
+                    className="tnum text-body text-ink transition-colors duration-100 group-hover:text-green after:absolute after:inset-0 after:content-['']"
                   >
                     {truncateAddress(w.walletAddress, 6)}
                   </Link>
