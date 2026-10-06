@@ -1,0 +1,613 @@
+@import "tailwindcss";
+
+/* Colour, type scale, space scale and layout grid are generated.
+   Edit design/tokens.py and re-run it, never this file's values. */
+@import "./tokens.css";
+
+@theme {
+  /* Words in the grotesk, digits in the monospace. Nothing picks a family
+     directly: prose inherits sans from body, numbers go through .tnum. */
+  --font-sans:
+    var(--font-sans-ui), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono: var(--font-mono-ui), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+html {
+  color-scheme: dark;
+  /* In-page links glide rather than jump. Honoured only when the reader has
+     not asked for reduced motion; the query below turns it off. */
+  scroll-behavior: smooth;
+  /* dvh, not vh: mobile browser chrome collapses on scroll and vh does not
+     account for it, which is what causes the cut-off bottom bar. */
+  min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  letter-spacing: var(--text-body--letter-spacing);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Nothing scrolls the body sideways. Wide content scrolls in its own box. */
+  overflow-x: hidden;
+}
+
+/* ── viewport-height utilities ─────────────────────────────────
+   100dvh minus the chrome: the desktop rail (4rem), or on mobile
+   the header (3.5rem) plus the tab bar (3.9rem) plus the iOS
+   safe-area inset.
+   ───────────────────────────────────────────────────────────── */
+.h-screen-d {
+  min-height: 100dvh;
+}
+.h-screen-d-nav {
+  min-height: calc(100dvh - 4.5rem);
+}
+@media (max-width: 899px) {
+  .h-screen-d-nav {
+    min-height: calc(100dvh - 3.5rem - 3.9rem - env(safe-area-inset-bottom));
+  }
+}
+
+/* ── surfaces ──────────────────────────────────────────────────
+   Solid, not glass. Every stop in the fill is opaque, so a card
+   never picks up the colour of the wash behind it and a column of
+   numbers reads the same wherever on the page it lands.
+
+   Depth is a lit top edge plus a grounded shadow.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --shadow-1: rgba(0, 0, 0, 0.34);
+  --shadow-2: rgba(0, 0, 0, 0.46);
+  --edge: rgba(255, 255, 255, 0.055);
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-lg);
+  /* One flat, opaque fill. No gradient, no translucency. */
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 1px 0 var(--edge),
+    0 1px 2px var(--shadow-1),
+    0 10px 24px -12px var(--shadow-2);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.panel-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-line);
+  box-shadow:
+    inset 0 1px 0 var(--edge),
+    0 2px 4px var(--shadow-1),
+    0 18px 36px -14px var(--shadow-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-interactive:hover {
+    transform: none;
+  }
+}
+
+/* Every number in the product goes through this: the monospace family and
+   tabular figures together, so a price ticking from 0.00041 to 0.00039 never
+   shifts the column it sits in. */
+.tnum {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+*:focus-visible {
+  outline: 1px solid var(--color-green);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 5px;
+  border: 3px solid var(--color-ground);
+}
+
+/* ── rail items ────────────────────────────────────────────────
+   Two things move together on hover: a pill fades up behind the
+   label, and the icon and label drift a couple of pixels with it.
+   Small enough that the destination stays readable throughout,
+   which is the whole constraint on animating navigation.
+   ───────────────────────────────────────────────────────────── */
+.navitem-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-surface-2);
+  opacity: 0;
+  transform: translateY(3px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.navitem:hover .navitem-fill,
+.navitem:focus-visible .navitem-fill {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.navitem-icon,
+.navitem-label {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 150ms ease;
+}
+.navitem:hover .navitem-icon,
+.navitem:hover .navitem-label {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navitem-fill,
+  .navitem-icon,
+  .navitem-label {
+    transition: none;
+  }
+  .navitem:hover .navitem-icon,
+  .navitem:hover .navitem-label {
+    transform: none;
+  }
+}
+
+/* Rows of controls scroll in their own box. The page never moves sideways
+   because a filter row ran longer than a phone. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── gas verdict ───────────────────────────────────────────────
+   A slow breath on the border and fill only. Nothing moves and no
+   text changes weight, because this sits in a row of numbers and a
+   badge that jumps would drag the eye off them every two seconds.
+   ───────────────────────────────────────────────────────────── */
+@keyframes gas-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.gas-pulse {
+  animation: gas-pulse 2200ms ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gas-pulse {
+    animation: none;
+  }
+}
+
+/* ── footer arrival ────────────────────────────────────────────
+   The footer rises into place as it comes into view. Same easing
+   and distance as the section reveals, so the page ends the way
+   the rest of it moved.
+   ───────────────────────────────────────────────────────────── */
+.footer-glide {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.footer-glide-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .footer-glide {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Range inputs inherit none of the page's design, so both the track
+   and the thumb are drawn here. The vendor rules are duplicated
+   rather than combined: a selector list containing one unrecognised
+   vendor pseudo-element is dropped whole by every browser that does
+   not know it. */
+.supply-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 26px;
+  background: transparent;
+  cursor: pointer;
+}
+.supply-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line-soft);
+}
+.supply-range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line-soft);
+}
+.supply-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--color-green);
+  border: 2px solid var(--color-ground);
+  transition: transform 120ms ease;
+}
+.supply-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-green);
+  border: 2px solid var(--color-ground);
+}
+.supply-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+/* ── page loader ───────────────────────────────────────────────
+   Present in the first paint rather than mounted after hydration,
+   which is what made the page flash into view before the loader
+   appeared. The inline script in <head> stamps `ht-loaded` on the
+   root when this session has already seen it, and that hides the
+   overlay before the browser ever paints it.
+   ───────────────────────────────────────────────────────────── */
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-ground);
+  transition: opacity 420ms ease;
+}
+.ht-loaded .page-loader,
+.page-loader[data-done="1"] {
+  opacity: 0;
+  pointer-events: none;
+}
+.ht-loaded .page-loader {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-loader {
+    display: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 650ms linear infinite;
+  transform-origin: center;
+}
+
+/* ── scroll reveal ─────────────────────────────────────────────
+   Opacity and a short lift, nothing else. A section that slides
+   a long way, scales, or rotates draws attention to the motion
+   rather than to what arrived.
+   ───────────────────────────────────────────────────────────── */
+/* Visible is the resting state, and the only state CSS can reach on its own.
+
+   This used to hide every `.reveal` at `opacity: 0` and wait for React to add
+   `.reveal-in`. That put the entire screener behind a successful hydration:
+   the rows were in the server HTML, correct and complete, and a single throw
+   anywhere in the client bundle left them at zero opacity permanently. The
+   reported symptom was "tokens are not displaying" on a page whose HTML was
+   holding every token.
+
+   So the hiding is now applied *by* the script that undoes it. `.reveal-out`
+   is added in an effect, only to elements below the fold, and removed when
+   they arrive. If that script never runs, the page is simply a page with no
+   entrance animation, which is the correct thing for an entrance animation to
+   degrade into. */
+.reveal {
+  transition:
+    opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-out {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-out {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* The single motion in the product: a row arriving from the chain. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.arrive {
+  animation: arrive 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── wordmark glitch ───────────────────────────────────────────
+   Two offset copies of the same string, clipped to bands and
+   displaced briefly. No font swap and no reflow, because the
+   copies are absolutely positioned over the real text.
+   ───────────────────────────────────────────────────────────── */
+.glitch {
+  position: relative;
+}
+.glitch-on::before,
+.glitch-on::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  white-space: pre;
+}
+.glitch-on::before {
+  color: var(--color-green);
+  animation: glitch-a 2000ms steps(2, end) 1 both;
+}
+.glitch-on::after {
+  color: var(--color-ink);
+  animation: glitch-b 2000ms steps(2, end) 1 both;
+}
+.glitch-on {
+  animation: glitch-base 2000ms steps(3, end) 1 both;
+}
+
+@keyframes glitch-base {
+  0%, 100% { transform: none; }
+  14% { transform: translate3d(2px, 0, 0); }
+  32% { transform: translate3d(-3px, 0, 0); }
+  56% { transform: translate3d(1px, -1px, 0); }
+  74% { transform: translate3d(-1px, 1px, 0); }
+}
+@keyframes glitch-a {
+  0%   { transform: translate3d(-4px, 0, 0); clip-path: inset(10% 0 64% 0); opacity: 0.9; }
+  22%  { transform: translate3d(5px, 0, 0);  clip-path: inset(46% 0 28% 0); }
+  44%  { transform: translate3d(-3px, 0, 0); clip-path: inset(6% 0 80% 0); }
+  66%  { transform: translate3d(4px, 0, 0);  clip-path: inset(68% 0 10% 0); opacity: 0.6; }
+  88%  { transform: translate3d(-1px, 0, 0); clip-path: inset(28% 0 54% 0); opacity: 0.25; }
+  100% { transform: none; clip-path: inset(0 0 100% 0); opacity: 0; }
+}
+@keyframes glitch-b {
+  0%   { transform: translate3d(4px, 0, 0);  clip-path: inset(58% 0 18% 0); opacity: 0.75; }
+  22%  { transform: translate3d(-5px, 0, 0); clip-path: inset(18% 0 58% 0); }
+  44%  { transform: translate3d(3px, 0, 0);  clip-path: inset(74% 0 6% 0); }
+  66%  { transform: translate3d(-4px, 0, 0); clip-path: inset(34% 0 44% 0); opacity: 0.45; }
+  88%  { transform: translate3d(1px, 0, 0);  clip-path: inset(12% 0 70% 0); opacity: 0.2; }
+  100% { transform: none; clip-path: inset(0 0 100% 0); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch-on,
+  .glitch-on::before,
+  .glitch-on::after {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
+  .glitch-on {
+    opacity: 1;
+  }
+}
+
+/* ── footer marquee ────────────────────────────────────────────
+   Oversized wordmark, cropped by the footer edge. The negative
+   bottom margin is what does the cropping: it pulls the baseline
+   below the overflow boundary so the letterforms are cut rather
+   than merely small.
+   ───────────────────────────────────────────────────────────── */
+.marquee {
+  /* Whole letterforms, not a cropped band. Height follows the track, and the
+     only thing overflow hides is the horizontal travel. */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  line-height: 1.06;
+  animation: marquee 46s linear infinite;
+}
+@keyframes marquee {
+  to {
+    /* Four copies, so half a track is a seamless loop point. */
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* ── nav link hover ────────────────────────────────────────────
+   Three things move together: a pill fades up behind the label,
+   the label lifts a pixel, and the underline wipes in from the
+   left. The pill sits under the text rather than around it, so
+   the label never shifts relative to its own underline.
+   ───────────────────────────────────────────────────────────── */
+.navlink-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--color-ink) 7%, transparent);
+  opacity: 0;
+  transform: translateY(3px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.navlink:hover .navlink-pill,
+.navlink:focus-visible .navlink-pill {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.navlink-label {
+  position: relative;
+  display: inline-block;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.navlink:hover .navlink-label {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navlink-pill,
+  .navlink-label {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Menu icon: a short glitch on hover, matching the wordmark's language. */
+.menu-btn:hover .menu-icon { animation: glitch-base 420ms steps(3, end) 1; }
+.menu-btn:hover { animation: glitch-base 420ms steps(3, end) 1; }
+@media (prefers-reduced-motion: reduce) {
+  .menu-btn:hover, .menu-btn:hover .menu-icon { animation: none; }
+}
+
+/* ── smooth scrolling, where it is switched on ──────────────────
+   Lenis is mounted on the landing page only and adds these classes
+   to <html> while it runs. Nothing here applies anywhere else.
+   ───────────────────────────────────────────────────────────── */
+
+/* Lenis sets the scroll position itself, frame by frame. The native
+   `scroll-behavior: smooth` above then interpolates toward that
+   moving target as well, so two easings fight over one number and
+   the result reads as stutter rather than smoothness. */
+html.lenis {
+  scroll-behavior: auto;
+}
+
+/* A panel that scrolls on its own must keep its wheel events. Without
+   this the sheet's list would hand its scroll to the page behind it,
+   which is locked while a sheet is open, so the list would simply not
+   move. `overscroll-behavior: contain` also stops a flick that reaches
+   the end of the list from carrying on into the page. */
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Iframes swallow pointer events mid-scroll and stall the animation.
+   None ship today; this costs nothing and prevents a surprise. */
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* ── legal prose ────────────────────────────────────────────────
+   The only place in the product with paragraphs. Everything else
+   is tables and numbers, so the body styles never needed to say
+   what a run of prose looks like.
+   ───────────────────────────────────────────────────────────── */
+.legal-prose p {
+  color: var(--color-ink-2);
+  line-height: 1.7;
+}
+.legal-prose p + p {
+  margin-top: 0.9rem;
+}
+.legal-prose strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.legal-prose ul {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--color-ink-2);
+  line-height: 1.7;
+}
+.legal-prose li {
+  padding-left: 1.1rem;
+  position: relative;
+}
+.legal-prose li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.72em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-line);
+}
+.legal-prose a {
+  color: var(--color-green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -1,0 +1,284 @@
+import Link from "next/link";
+import { LegalPage, Clause } from "@/components/legal/LegalPage";
+import { BRAND } from "@/lib/brand";
+import { robinhoodChain } from "@/lib/chain";
+
+export const metadata = {
+  title: "Privacy",
+  description:
+    "What Hood Terminus collects, who processes it, what stays in your browser, and what is on a public blockchain and therefore permanent.",
+};
+
+/**
+ * Privacy notice.
+ *
+ * Every factual claim below was read out of the code rather than assumed, and
+ * the inventory is worth keeping written down here because this page is the
+ * file nobody remembers is downstream of a new feature.
+ *
+ *   - Browser storage, all on-device and never sent to us: `ht:alerts` (alert
+ *     rules), `ht:tracked` (watched addresses), `ht:currency` (USD/GBP/EUR),
+ *     `ht:rail` (sidebar collapsed), `ht:loaded` (first-visit marker) and
+ *     `ht:install-dismissed` (the install prompt). The `-changed` keys beside
+ *     some of them are event names, not storage.
+ *   - Supabase tables: `swaps`, `token_metadata`, `wallet_pnl`,
+ *     `wallet_rankings`. Every one of these is keyed by a wallet address or a
+ *     token address read off a public chain. None of them holds a name, an
+ *     email or anything a person typed about themselves, except the token
+ *     description and image a creator chooses to attach.
+ *   - Supabase storage bucket `token-images`, added 8 September, holds uploaded
+ *     token artwork. Public by design, because a token's logo is public.
+ *   - Privy holds the identity: an email address, an X account or a Telegram
+ *     account, plus key material for a wallet it creates. That is the only
+ *     place a person's own identifier exists, and it is the most sensitive
+ *     thing in this system.
+ *   - There is NO analytics, advertising or third-party tracking. Verified by
+ *     grep: no gtag, no Plausible, no PostHog, no Vercel Analytics. This is why
+ *     there is no cookie banner, and clause 4 says so.
+ *   - `/api/fx` proxies Frankfurter server-side specifically so the rate
+ *     provider never sees a visitor's browser.
+ *
+ * If any of that changes, this page changes with it.
+ */
+export default function PrivacyPage() {
+  return (
+    <LegalPage
+      title="Privacy"
+      updated="8 September 2026"
+      intro="What we collect, what never leaves your browser, and what is on a public chain and therefore beyond anyone's power to delete. Written to be read, not to be survived."
+      summary={{
+        heading: "Headnote",
+        points: [
+          "There is no account here. We do not ask for your name, and we do not know it.",
+          "Signing in with email, X or Telegram gives that identifier to Privy, not to us.",
+          "Your alerts, tracked wallets and currency choice never leave your browser.",
+          "We hold public chain data keyed by wallet address, which we did not get from you.",
+          "No analytics, no advertising, no third-party trackers, and so no cookie banner.",
+          "Anything already on the blockchain cannot be deleted by us or by anyone.",
+        ],
+        footnote:
+          "A précis. The clauses below are the operative description.",
+      }}
+    >
+      <p>
+        {BRAND.name} is a website for reading {robinhoodChain.name} and sending
+        your own transactions to it. That shape decides most of this notice:
+        there is no account, no profile, and no sign-up form asking who you are.
+      </p>
+
+      <Clause n={1} heading="What we hold">
+        <p>
+          <strong>An address, if you connect one.</strong> Connecting a wallet
+          tells the site your public address. It is not a name, but it is a
+          persistent identifier and everything that address has ever done is
+          public, so we treat it as personal data rather than pretending
+          otherwise.
+        </p>
+        <p>
+          <strong>Public chain and market data.</strong> We keep tables of swaps,
+          token records, wallet profit and loss, and wallet rankings. All of it is
+          derived from the public chain and from market data providers. We did not
+          get it from you and it exists whether or not you visit.
+        </p>
+        <p>
+          <strong>What a token creator attaches.</strong> If you launch a token
+          you can add a description and upload an image. Both are stored by us,
+          both are published, and both are meant to be seen by everybody. Do not
+          put anything private in either.
+        </p>
+        <p>
+          <strong>Ordinary server logs.</strong> Vercel records requests to the
+          site, including IP addresses, for the security and reliability of the
+          service.
+        </p>
+        <p>
+          We do not ask for your name, your date of birth, your address, your
+          documents or your phone number. There is no identity check because
+          there is nothing here that requires one.
+        </p>
+      </Clause>
+
+      <Clause n={2} heading="Signing in, and what Privy holds">
+        <p>
+          You can use the site with a wallet you already have, in which case
+          nobody learns anything about you beyond the address. You can instead
+          sign in with an email address, an X account or Telegram, and have a
+          wallet created for you.
+        </p>
+        <p>
+          That second route is operated by <strong>Privy</strong>. Privy holds the
+          identifier you signed in with, and holds key material for the wallet it
+          creates on your behalf. If you signed in with X we display your
+          profile picture and handle, which we read from Privy each time rather
+          than storing.
+        </p>
+        <p>
+          <strong>This is the most sensitive part of the system and it is worth
+          being exact about it.</strong> Privy is the party that can associate
+          your email address or social account with your wallet address. We can
+          see that association while you are signed in. It is what makes signing
+          in convenient, and it is also what makes it different in kind from
+          arriving with your own wallet. If you would rather no such link exists,
+          use your own wallet.
+        </p>
+      </Clause>
+
+      <Clause n={3} heading="What stays in your browser">
+        <p>
+          Several things you set are kept in your browser&rsquo;s local storage
+          and are never sent to us:
+        </p>
+        <ul>
+          <li>your alert rules, and which of them have fired</li>
+          <li>the wallet addresses you have chosen to track</li>
+          <li>whether you display secondary figures in dollars, pounds or euros</li>
+          <li>
+            whether the sidebar is collapsed, whether you have visited before, and
+            whether you dismissed the install prompt
+          </li>
+        </ul>
+        <p>
+          They live on the device you set them on. They do not follow you to
+          another browser, we cannot read them, and clearing your browser data
+          removes them permanently.
+        </p>
+      </Clause>
+
+      <Clause n={4} heading="No analytics, and so no cookie banner">
+        <p>
+          There is no Google Analytics here, no advertising network, no
+          third-party tracking script and no pixel. We do not build a profile of
+          what you look at and we have nothing to sell to anyone who would want
+          one.
+        </p>
+        <p>
+          <strong>
+            This is why the site does not interrupt you with a cookie banner.
+          </strong>{" "}
+          The consent that a banner exists to collect is consent for tracking, and
+          there is none to consent to. The browser storage in clause 3 is
+          functional: it holds settings you chose, on your own device.
+        </p>
+      </Clause>
+
+      <Clause n={5} heading="Who else processes this">
+        <p>
+          The site runs on services we do not own. Each sees a limited part of
+          what happens:
+        </p>
+        <ul>
+          <li>
+            <strong>Vercel</strong> hosts the site and receives every request to
+            it, including IP addresses
+          </li>
+          <li>
+            <strong>Supabase</strong> stores the chain-derived tables and the
+            uploaded token images
+          </li>
+          <li>
+            <strong>Privy</strong> holds sign-in identifiers and embedded wallet
+            key material, for people who use that route
+          </li>
+          <li>
+            <strong>Alchemy</strong> and the public Robinhood Chain endpoint serve
+            chain data, and see requests from the site
+          </li>
+          <li>
+            <strong>GeckoTerminal</strong> supplies market data
+          </li>
+          <li>
+            <strong>WalletConnect and Coinbase</strong> are contacted only if you
+            choose to connect through them
+          </li>
+        </ul>
+        <p>
+          Exchange rates for the pounds and euros display are fetched by our own
+          server rather than by your browser, so the rate provider never sees you
+          at all. That was a deliberate choice and it is the kind of thing worth
+          doing when it is this cheap.
+        </p>
+        <p>
+          <strong>We do not sell your data, and we never will.</strong> We do not
+          share it for advertising and there is no arrangement under which
+          anybody pays us for it.
+        </p>
+      </Clause>
+
+      <Clause n={6} heading="The blockchain part cannot be deleted">
+        <p>
+          Every transaction you send is recorded permanently on a public
+          blockchain by design. Your address, what you traded, when, for how much,
+          and any token you launched are all public forever and readable by
+          anyone, whether or not they ever visit this site.
+        </p>
+        <p>
+          <strong>
+            Nobody can delete that, including us. It is not a policy choice and
+            no request can change it.
+          </strong>{" "}
+          It is worth understanding before you decide how you want to use a
+          public chain.
+        </p>
+        <p>
+          What we can do is remove what we hold ourselves: a token image and
+          description you uploaded, and the rows in our own tables. What that
+          cannot do is un-publish the chain.
+        </p>
+      </Clause>
+
+      <Clause n={7} heading="What you can ask us to do">
+        <p>
+          Under the data protection law that applies to you, you can ask us for
+          a copy of what we hold about you, ask us to correct it, ask us to
+          delete it, or object to us holding it. We answer those requests
+          wherever you are, rather than only where we are obliged to.
+        </p>
+        <p>
+          In practice, for this site that means the token metadata and images
+          attached to a token you launched, and the rows keyed to your address in
+          our own tables. Ask and we will do it.
+        </p>
+        <p>
+          Two honest limits. We cannot delete anything from the blockchain, as
+          clause 6 explains. And to delete your sign-in identity you will need to
+          go to Privy, because they hold it rather than us.
+        </p>
+        <p>
+          Reach us through the links in the footer. If you are not satisfied
+          with how we answer, you can complain to the data protection authority
+          where you live.
+        </p>
+      </Clause>
+
+      <Clause n={8} heading="How long we keep it">
+        <p>
+          Chain-derived data is kept for as long as the site runs, because it
+          describes a public chain rather than a person and its usefulness does
+          not expire.
+        </p>
+        <p>
+          Token images and descriptions are kept while the token exists, which in
+          practice means indefinitely.
+        </p>
+        <p>
+          Server logs are kept for as long as Vercel retains them under their own
+          policy.
+        </p>
+      </Clause>
+
+      <Clause n={9} heading="Changes, and how to reach us">
+        <p>
+          We update this notice when what we do changes, and the date at the top
+          says when it last did. A notice that describes a system we no longer run
+          would be worse than none.
+        </p>
+        <p>
+          For anything in this notice, or to make a request under clause 7, write
+          to us through the links in the footer, or read the{" "}
+          <Link href="/terms">terms of use</Link> for what the service is and
+          is not.
+        </p>
+      </Clause>
+    </LegalPage>
+  );
+}

@@ -1,0 +1,14 @@
+# The contracts workspace is a separate toolchain with its own node_modules and
+# build artefacts. None of it is part of the deployed app, and uploading it adds
+# hundreds of megabytes to every deploy.
+contracts/
+scripts/shoot.mjs
+
+# Never uploaded. Env vars belong in the Vercel project settings.
+.env
+.env.*
+
+# The TypeScript incremental build cache. A local artefact, near a megabyte,
+# and rewritten by every typecheck, so it was the bulk of every upload and
+# re-sent each time for nothing.
+tsconfig.tsbuildinfo

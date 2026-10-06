@@ -1,0 +1,21 @@
+{
+  "name": "hood-terminus-contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network robinhoodTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network robinhood",
+    "deploy:v2": "hardhat run scripts/deploy-v2.ts --network robinhood",
+    "set:quotes": "hardhat run scripts/set-quotes.ts --network robinhood",
+    "rehearse:v2": "hardhat run scripts/rehearse-v2.ts",
+    "transfer:owner": "hardhat run scripts/transfer-ownership.ts --network robinhood",
+    "set:fee": "hardhat run scripts/set-launch-fee.ts --network robinhood"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.15.0"
+  }
+}
