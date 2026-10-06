@@ -439,6 +439,18 @@ export type ScreenSort =
   | "volume"
   | "liquidity";
 
+/**
+ * Whether a pool has a market at all.
+ *
+ * Separate from the liquidity floor on purpose. The floor is the reader's
+ * preference about size; this is the question of whether there is anything to
+ * measure. A pool with no liquidity has a price in the sense that arithmetic
+ * produces one, and no price in the sense anybody can trade at it.
+ */
+function tradeable(pool: Pool): boolean {
+  return (pool.liquidityUsd ?? 0) > 0;
+}
+
 export function screen(
   pools: Pool[],
   {
@@ -499,16 +511,44 @@ export function screen(
   const liquid = population.filter((p) => (p.liquidityUsd ?? 0) >= floor);
 
   switch (sort) {
+    /**
+     * Movers, ranked by percentage but never by percentage alone.
+     *
+     * A pool holding nothing has no meaningful price change. The smallest
+     * trade possible moves its price arbitrarily far, so its percentage is an
+     * artefact of having no market rather than a measurement of one. Sorted
+     * purely on that number, dust won: on a live snapshot of 130 pools with
+     * the floor set to "Any", a pool with zero liquidity ranked third while a
+     * pool holding over $100,000 ranked sixty-fifth.
+     *
+     * So pools with no liquidity are dropped from the change boards outright.
+     * This is not the liquidity floor doing its job twice: the floor is a
+     * preference about how small a market the reader wants to see, and "Any"
+     * has to keep meaning any. Zero is different in kind. There is no market
+     * to show, and a gainers board exists to list things you could have
+     * bought.
+     *
+     * Exact ties then break by liquidity, so where two pools moved the same
+     * amount the deeper market reads first.
+     */
     case "gainers":
       return liquid
-        .filter((p) => (p.change[window] ?? 0) > 0)
-        .sort((a, b) => (b.change[window] ?? 0) - (a.change[window] ?? 0))
+        .filter((p) => tradeable(p) && (p.change[window] ?? 0) > 0)
+        .sort(
+          (a, b) =>
+            (b.change[window] ?? 0) - (a.change[window] ?? 0) ||
+            (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0),
+        )
         .slice(0, limit);
 
     case "losers":
       return liquid
-        .filter((p) => (p.change[window] ?? 0) < 0)
-        .sort((a, b) => (a.change[window] ?? 0) - (b.change[window] ?? 0))
+        .filter((p) => tradeable(p) && (p.change[window] ?? 0) < 0)
+        .sort(
+          (a, b) =>
+            (a.change[window] ?? 0) - (b.change[window] ?? 0) ||
+            (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0),
+        )
         .slice(0, limit);
 
     case "volume":
