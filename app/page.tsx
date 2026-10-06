@@ -6,34 +6,26 @@ import { PageField } from "@/components/visual/PageField";
 import { SmoothScroll } from "@/components/visual/SmoothScroll";
 import { GasMonitor } from "@/components/market/GasMonitor";
 import { CreatePitch } from "@/components/create/CreatePitch";
-import { CurveBoard } from "@/components/create/CurveBoard";
 import { getCurveTokens } from "@/lib/launchpad/curve";
-import { Filters } from "@/components/discover/Filters";
+import { Screener } from "@/components/discover/Screener";
 import { Section } from "@/components/primitives/Section";
-import {
-  IconRocket,
-  IconScreener,
+import {  IconScreener,
 } from "@/components/primitives/SectionIcons";
 import { Card } from "@/components/primitives/Card";
 import { Reveal } from "@/components/primitives/Reveal";
 import { ChainStats } from "@/components/market/ChainStats";
-import { PoolTable } from "@/components/market/PoolTable";
 import { IndexedResults } from "@/components/market/IndexedResults";
 import {
   getNewPools,
   getTopPools,
   getTrendingPools,
-  screen,
-  quoteAssets,
-  WINDOWS,
+  screen,  WINDOWS,
   type Pool,
   type ScreenSort,
   type Window,
 } from "@/lib/market/gecko";
 import {
-  searchIndexedPools,
-  newestIndexedPools,
-  indexedPoolCount,
+  searchIndexedPools,  indexedPoolCount,
 } from "@/lib/market/pool-index";
 
 const SORT_LABELS: Record<ScreenSort, string> = {
@@ -187,9 +179,6 @@ export default async function DiscoverPage({ searchParams }: Props) {
         (p) => !known.has(p.address.toLowerCase()),
       )
     : [];
-
-  const quotes = quoteAssets(everything);
-
   const [curveTokens, poolCount] = await Promise.all([
     getCurveTokens(24),
     indexedPoolCount(),
@@ -214,16 +203,6 @@ export default async function DiscoverPage({ searchParams }: Props) {
         icon={<IconScreener />}
         aside={
           <div className="flex items-center gap-4">
-            {/* Says how many are on screen against how many exist.
-                "3,410 pairs" sat above a table of twenty and read as a claim
-                the page was visibly failing to keep. The honest version is the
-                comparison: this is the slice, that is the market, and the
-                difference is what search and View all are for. */}
-            {poolCount !== null && (
-              <span className="tnum hidden text-body text-ink-3 sm:inline">
-                {rows.length} of {poolCount.toLocaleString()} pairs
-              </span>
-            )}
             {(showAll || rows.length >= 50) && (
             <ViewAll
             showingAll={showAll}
@@ -238,37 +217,26 @@ export default async function DiscoverPage({ searchParams }: Props) {
         </Reveal>
         <Reveal>
           <Card className="overflow-hidden">
+            {/* The feeds are fetched once here and filtered in the browser, so
+                changing a board or a setting costs nothing. Only search still
+                reaches the server, because it can fall through to our own pool
+                index. See `Screener`. */}
             <Suspense
               fallback={<div className="h-14 border-b border-line-soft" />}
             >
-              <Filters
-                sort={sort}
-                window={window}
-                minLiquidity={minLiquidity}
+              <Screener
+                top={top}
+                fresh={fresh}
+                trending={trending}
+                curveTokens={curveTokens}
                 query={query}
-                quote={quote}
-                quotes={quotes}
+                showAll={showAll}
+                initialSort={sort}
+                initialWindow={window}
+                initialMinLiquidity={minLiquidity}
+                initialQuote={quote}
               />
             </Suspense>
-
-            {/* Tokens launched here are a different shape from pools on the
-                chain, so the board swaps rather than the table trying to
-                render both. It is still one section and one set of tabs, which
-                is what the reader is choosing between. */}
-            {sort === "curve" ? (
-              <div className="p-3">
-                <CurveBoard tokens={curveTokens} />
-              </div>
-            ) : (
-            <PoolTable
-              pools={rows}
-              window={window}
-              sort={
-                sort === "volume" ? "volume" : sort === "new" ? "age" : "change"
-              }
-              emptyLabel="Nothing matches these filters"
-            />
-            )}
           </Card>
           {/* Anything our own index knows about that the feed did not. */}
           <IndexedResults pools={alsoFound} />

@@ -99,6 +99,10 @@ export function Filters({
   query,
   quote,
   quotes,
+  onSort,
+  onWindow,
+  onLiquidity,
+  onQuote,
 }: {
   sort: ScreenSort;
   window: Window;
@@ -107,11 +111,27 @@ export function Filters({
   quote: string;
   /** The quote assets actually present, commonest first. */
   quotes: { symbol: string; count: number }[];
+  /**
+   * Board and settings are handled by the parent in React state, not by a
+   * navigation. All four are arithmetic over rows the browser already holds, so
+   * routing them through the server made a one-click setting wait on three
+   * upstream feeds. See `Screener`.
+   */
+  onSort: (value: ScreenSort) => void;
+  onWindow: (value: Window) => void;
+  onLiquidity: (value: number) => void;
+  onQuote: (value: string) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
+  /**
+   * Only search goes through the URL now.
+   *
+   * A query the feeds cannot answer falls through to our own pool index, which
+   * is read on the server, so this one does need the round trip.
+   */
   const set = useCallback(
     (key: string, value: string) => {
       const next = new URLSearchParams(params.toString());
@@ -132,9 +152,20 @@ export function Filters({
    */
   const [text, setText] = useState(query);
 
-  useEffect(() => {
+  /**
+   * Follow the URL when it changes under us, for a back button or a link that
+   * arrives with a query already on it.
+   *
+   * Adjusted during render rather than in an effect. Syncing it in an effect
+   * rendered the stale text once, then immediately re-rendered, which is the
+   * cascading render React now warns about. Resetting with a `key` was the other
+   * option and is worse here: remounting the input takes the caret with it.
+   */
+  const [lastQuery, setLastQuery] = useState(query);
+  if (query !== lastQuery) {
+    setLastQuery(query);
     setText(query);
-  }, [query]);
+  }
 
   useEffect(() => {
     if (text === query) return;
@@ -183,7 +214,7 @@ export function Filters({
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => set("sort", s.value)}
+              onClick={() => onSort(s.value)}
               className={clsx(
                 "relative shrink-0 px-3 py-2.5 text-body whitespace-nowrap",
                 "transition-colors duration-100",
@@ -214,7 +245,7 @@ export function Filters({
           label="Window"
           options={WINDOWS.map((w) => ({ value: w, label: w }))}
           value={window}
-          onChange={(v) => set("t", v)}
+          onChange={(v) => onWindow(v as Window)}
         />
         <span className="h-5 w-px shrink-0 bg-line-soft" aria-hidden="true" />
         <Segmented
@@ -224,7 +255,7 @@ export function Filters({
             label: l.label,
           }))}
           value={String(minLiquidity)}
-          onChange={(v) => set("liq", v)}
+          onChange={(v) => onLiquidity(Number(v))}
         />
 
         {/* Only when there is a choice to make. On a chain where everything
@@ -243,7 +274,7 @@ export function Filters({
                 })),
               ]}
               value={quote}
-              onChange={(v) => set("pair", v)}
+              onChange={(v) => onQuote(v)}
             />
           </>
         )}
