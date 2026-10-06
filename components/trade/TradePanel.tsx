@@ -15,7 +15,6 @@ import { TokenLogo } from "@/components/market/TokenLogo";
 import { TokenSelect } from "@/components/trade/TokenSelect";
 import { clsx } from "@/lib/clsx";
 import { robinhoodChain } from "@/lib/chain";
-import { formatUsd } from "@/lib/format";
 import { CONTRACTS } from "@/lib/chain/contracts";
 import {
   applySlippage,

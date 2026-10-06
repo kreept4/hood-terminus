@@ -846,39 +846,6 @@ const INPUT =
   "w-full rounded-md border border-line bg-surface-2 px-3 py-2.5 text-body text-ink " +
   "placeholder:text-ink-3 focus:border-green focus:outline-none";
 
-function ModeCard({
-  active,
-  onSelect,
-  title,
-  body,
-}: {
-  active: boolean;
-  onSelect: () => void;
-  title: string;
-  body: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={active}
-      className={clsx(
-        "flex flex-col gap-1.5 rounded-md border p-3.5 text-left transition-colors duration-100",
-        active ? "border-green bg-green-deep" : "border-line hover:bg-surface-2",
-      )}
-    >
-      <span
-        className={clsx(
-          "text-body font-medium",
-          active ? "text-green" : "text-ink",
-        )}
-      >
-        {title}
-      </span>
-      <span className="text-micro leading-relaxed text-ink-2">{body}</span>
-    </button>
-  );
-}
 
 function Field({
   label,

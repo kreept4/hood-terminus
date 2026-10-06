@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Card } from "@/components/primitives/Card";
 import { Delta } from "@/components/primitives/Delta";
 import { TokenLogo } from "@/components/market/TokenLogo";
-import { clsx } from "@/lib/clsx";
 import { formatPrice, formatUsd, NO_VALUE } from "@/lib/format";
 
 /**

@@ -14,9 +14,7 @@ import Dock from "@/components/shell/Dock";
 import {
   IconTokens,
   IconTrack,
-  IconWallet,
-  IconPortfolio,
-  IconAlerts,
+  IconWallet,  IconAlerts,
   IconTrade,
 } from "@/components/shell/NavIcons";
 
