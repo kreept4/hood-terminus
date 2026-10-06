@@ -139,7 +139,7 @@ export function ConnectWallet({
         className={clsx(
           "flex items-center justify-center rounded-md border border-line text-ink",
           "transition-colors duration-100 hover:border-green hover:text-green",
-          compact ? "h-9 w-9" : "gap-2 px-3 py-1.5 text-body",
+          compact ? "tap-44 h-9 w-9" : "gap-2 px-3 py-1.5 text-body",
           className,
         )}
       >
@@ -282,7 +282,7 @@ function SignIn({
           {email.trim() !== "" && (
             <button
               type="submit"
-              className="shrink-0 rounded-md bg-green px-2.5 py-1 text-micro font-semibold text-on-accent transition-opacity duration-100 hover:opacity-90"
+              className="tap-44 shrink-0 rounded-md bg-green px-2.5 py-1 text-micro font-semibold text-on-accent transition-opacity duration-100 hover:opacity-90"
             >
               Continue
             </button>

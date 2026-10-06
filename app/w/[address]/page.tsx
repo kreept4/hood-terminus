@@ -57,7 +57,7 @@ export default async function WalletPage({ params }: Params) {
               rel="noopener noreferrer"
               aria-label="View on the block explorer"
               title="View on the block explorer"
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-2 transition-colors duration-100 hover:border-green hover:text-green"
+              className="tap-44 flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-2 transition-colors duration-100 hover:border-green hover:text-green"
             >
               <IconExternal />
             </a>

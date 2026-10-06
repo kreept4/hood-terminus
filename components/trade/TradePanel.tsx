@@ -366,7 +366,7 @@ export function TradePanel({
               type="button"
               disabled={!balanceIn}
               onClick={() => setPercent(pct)}
-              className="tnum rounded-md border border-line py-1.5 text-micro text-ink-2 transition-colors duration-100 hover:border-green hover:text-green disabled:opacity-40"
+              className="tnum flex min-h-10 items-center justify-center rounded-md border border-line py-1.5 text-micro text-ink-2 transition-colors duration-100 hover:border-green hover:text-green disabled:opacity-40"
             >
               {pct === 100 ? "Max" : `${pct}%`}
             </button>
