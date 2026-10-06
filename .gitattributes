@@ -1,3 +1,13 @@
+# Every text file is stored and checked out with LF.
+#
+# The import arrived with mixed endings: `Sidebar.tsx` and `app/page.tsx` were
+# committed as CRLF while `CreateForm.tsx` and `PoolTable.tsx` were LF. Editing a
+# file on the wrong side of that split rewrote every line, so removing one unused
+# import showed up as 968 changed lines and the real change was invisible. The
+# hackathon disclosure asks a reader to audit these commits, which they cannot do
+# through diffs like that. CI also runs on Linux, so LF is the side to land on.
+* text=auto eol=lf
+
 # Solidity sources are checked out with LF on every platform.
 #
 # solc hashes the source bytes into the metadata it appends to the bytecode, so
