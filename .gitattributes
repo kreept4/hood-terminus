@@ -1,0 +1,13 @@
+# Solidity sources are checked out with LF on every platform.
+#
+# solc hashes the source bytes into the metadata it appends to the bytecode, so
+# the same contract compiled from a CRLF checkout and an LF one produces the
+# same code with a different trailing metadata hash. That broke the one promise
+# lib/verify/sim-artifact.ts makes, which is that `npm run build:verify-sim`
+# reproduces it byte for byte: on Windows, with core.autocrlf on, it could not.
+# The committed artifact is built from LF, so the working tree has to be LF too.
+*.sol text eol=lf
+
+# The generated artifact itself, for the same reason: it is compared byte for
+# byte against a fresh build in CI.
+lib/verify/sim-artifact.ts text eol=lf
