@@ -129,22 +129,58 @@ export function ConnectWallet({
     );
   }
 
+  /**
+   * Signed in, with no wallet attached.
+   *
+   * Three states, not two. `isConnected` above answers "is there a wallet",
+   * which is not the same question as "is this person signed in": Privy can
+   * hold a completed session while the account has no embedded wallet, which is
+   * what happens while wallet creation is off for the app.
+   *
+   * Treating that as signed-out was the bug. The trigger read "Connect wallet"
+   * to somebody who had just signed in, so the only available reading was that
+   * the sign-in had failed. It had not. Showing the identity we actually hold,
+   * and explaining the missing half inside, is the honest version.
+   */
+  const signedInWithoutWallet = Boolean(auth?.ready && auth?.authenticated);
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={label}
-        title={compact ? label : undefined}
+        aria-label={signedInWithoutWallet ? "Signed in, no wallet yet" : label}
+        title={
+          signedInWithoutWallet
+            ? "Signed in. No wallet attached yet."
+            : compact
+              ? label
+              : undefined
+        }
         className={clsx(
-          "flex items-center justify-center rounded-md border border-line text-ink",
+          "flex items-center justify-center rounded-md border text-ink",
           "transition-colors duration-100 hover:border-green hover:text-green",
+          signedInWithoutWallet ? "border-amber-line" : "border-line",
           compact ? "tap-44 h-9 w-9" : "gap-2 px-3 py-1.5 text-body",
           className,
         )}
       >
-        <IconWalletSmall />
-        {!compact && label}
+        {signedInWithoutWallet && auth?.avatarUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={auth.avatarUrl}
+            alt=""
+            width={20}
+            height={20}
+            className="h-5 w-5 shrink-0 rounded-full"
+          />
+        ) : (
+          <IconWalletSmall />
+        )}
+        {!compact &&
+          (signedInWithoutWallet
+            ? (auth?.handle ?? "Signed in")
+            : label)}
       </button>
 
       <AnimatePresence>

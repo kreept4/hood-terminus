@@ -185,8 +185,21 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // The API is same-origin only. No CORS headers means no cross-origin
-        // browser can read these, which matters for the expensive ones.
+        /**
+         * The API is same-origin by default, with one stated exception.
+         *
+         * Sending no CORS headers is what keeps a cross-origin page from
+         * reading these, which matters for the expensive ones. `/api/verify/*`
+         * opts out and sets its own, because Verify is the piece of this
+         * product worth other people building on and a check nobody else can
+         * call is a check nobody else can use. That route is public chain data
+         * with no session behind it, so there is nothing for a hostile page to
+         * ride, and it carries its own rate limit.
+         *
+         * `Cache-Control: no-store` here is a default, not a ceiling: a route
+         * that sets its own in the response wins, which is how Verify keeps its
+         * sixty-second edge cache.
+         */
         source: "/api/:path*",
         headers: [
           { key: "X-Robots-Tag", value: "noindex" },

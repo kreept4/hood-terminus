@@ -109,6 +109,15 @@ def contrast(fg: str, bg: str) -> float:
 HUE_GREEN = 123.0
 HUE_RED = 33.0
 
+# Amber, for Verify's caution and for any check that warns rather than fails.
+#
+# Sits between the red and the green on purpose. A warning that borrowed the red
+# would read as a failure and a warning that borrowed the green would read as a
+# pass, and Verify's whole contract is that those three states stay distinct at
+# a glance. Placed nearer the red than the green, because the cost of reading a
+# caution as a pass is somebody buying a token they should have looked at twice.
+HUE_AMBER = 80.0
+
 # The brand accent. Pinned, not derived, and the hue above is set to match it
 # so the neutrals and the supporting ramp agree with it rather than sitting a
 # quarter-turn away.
@@ -140,6 +149,12 @@ DARK_ACCENTS = {
     "red": (0.640, 0.215, HUE_RED),
     "redLine": (0.338, 0.100, HUE_RED),
     "redDeep": (0.250, 0.080, HUE_RED),
+    # Same three steps as the red: a text colour, a border, and a fill dark
+    # enough to carry that text. Lighter than the red because amber loses
+    # contrast against this ground faster than a red of the same lightness does.
+    "amber": (0.800, 0.150, HUE_AMBER),
+    "amberLine": (0.360, 0.080, HUE_AMBER),
+    "amberDeep": (0.262, 0.055, HUE_AMBER),
 }
 
 
@@ -302,6 +317,11 @@ CONTRACTS = [
     ("green", "surface", 3.0, "up values on a cell"),
     ("red", "ground", 3.0, "down values"),
     ("red", "surface", 3.0, "down values on a cell"),
+    ("amber", "ground", 3.0, "caution and warn"),
+    ("amber", "surface", 3.0, "caution on a cell"),
+    # The one that matters most: a warn chip is amber text on its own amber
+    # fill, so that pair has to hold on its own rather than against the page.
+    ("amber", "amberDeep", 3.0, "warn chip label on its fill"),
     ("line", "ground", 1.2, "hairline visible against page"),
 ]
 

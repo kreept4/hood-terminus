@@ -1,6 +1,7 @@
 import "server-only";
 import { createPublicClient, http, type PublicClient } from "viem";
 import { robinhoodChain } from "@/lib/chain";
+import { CONTRACTS } from "@/lib/chain/contracts";
 
 /**
  * Verify's chain client.
@@ -32,8 +33,19 @@ export function verifyClient(): PublicClient {
  */
 export const V4_POOL_MANAGER = "0x8366a39cc670b4001a1121b8f6a443a643e40951" as const;
 
-/** Wrapped ETH, read off a live WETH-quoted v3 pool. Verified 2026-10-06. */
-export const WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73" as const;
+/**
+ * Wrapped ETH, from the one place the app records chain addresses.
+ *
+ * This was a second literal of the same address, which is how two copies of a
+ * contract address end up disagreeing after one of them is corrected. There is
+ * nothing special about Verify's need for it, so it reads the shared record,
+ * which carries the proof of how the address was established.
+ *
+ * Re-exported rather than removed because `simulate.ts` imports it from here,
+ * and it only ever compares it case-insensitively or passes it as a call
+ * argument, so the checksum casing this used to carry was never load-bearing.
+ */
+export const WETH = CONTRACTS.weth;
 
 /** v4 marks native ETH as the zero address. */
 export const NATIVE = "0x0000000000000000000000000000000000000000" as const;
