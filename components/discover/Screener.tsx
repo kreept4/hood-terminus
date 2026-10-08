@@ -141,7 +141,6 @@ export function Screener({
         sort={sort}
         window={timeWindow}
         minLiquidity={minLiquidity}
-        query={query}
         quote={quote}
         quotes={quotes}
         onSort={setSort}

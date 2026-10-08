@@ -60,7 +60,12 @@ cp .env.example .env.local   # then fill in your own values
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3003.
+
+The port is pinned to 3003 rather than Next's default because that is the origin
+registered with the Privy app. Privy refuses an unregistered origin with a 403
+from `auth.privy.io/api/v1/oauth/init`, and the failure reads as every sign-in
+button doing nothing, so running on 3000 means no sign-in at all.
 
 ## Hackathon disclosure
 

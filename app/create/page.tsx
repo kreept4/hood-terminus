@@ -1,4 +1,5 @@
 import { CreateForm } from "@/components/create/CreateForm";
+import { CreatePitch } from "@/components/create/CreatePitch";
 import { YourTokens } from "@/components/create/YourTokens";
 import { OwnerPanel } from "@/components/create/OwnerPanel";
 
@@ -20,6 +21,13 @@ export default function CreatePage() {
           pool.
         </p>
       </header>
+
+      {/* The pitch. It used to sit on the homepage, between the chain stats and
+          the board, where it interrupted a terminal to sell a feature. Here it
+          is in front of the people who already chose to launch something, and
+          its visual effects are welcome because nothing on this page is a live
+          number waiting to be read. */}
+      <CreatePitch />
 
       <div className="mt-8">
         <CreateForm />

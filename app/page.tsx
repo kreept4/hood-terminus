@@ -1,13 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { clsx } from "@/lib/clsx";
-import { Hero } from "@/components/discover/Hero";
-import { PageField } from "@/components/visual/PageField";
-import { SmoothScroll } from "@/components/visual/SmoothScroll";
 import { GasMonitor } from "@/components/market/GasMonitor";
-import { CreatePitch } from "@/components/create/CreatePitch";
 import { getCurveTokens } from "@/lib/launchpad/curve";
 import { Screener } from "@/components/discover/Screener";
+import { TerminalHeader } from "@/components/discover/TerminalHeader";
 import { Section } from "@/components/primitives/Section";
 import {  IconScreener,
 } from "@/components/primitives/SectionIcons";
@@ -186,16 +183,18 @@ export default async function DiscoverPage({ searchParams }: Props) {
 
   return (
     <div>
-      {/* This page only. The scroll wheel belongs to the browser everywhere
-          the reader is working rather than being sold to. */}
-      <SmoothScroll />
-      <PageField />
-      <Hero />
-      {/* Directly under the hero: four live numbers answering whether anything
-          is actually happening on this chain, before any board has to be read. */}
-      <ChainStats initial={top} poolCount={poolCount} />
+      {/* The terminal starts with the chain, not with a pitch.
 
-      <CreatePitch />
+          This page used to open with a `min-h-dvh` hero, a hijacked scroll, a
+          background field and a parallax pixel-reveal headline, so the first
+          screen on a phone held a claim and a button and no data at all. The
+          board is the product; it now begins above the fold on a 390px screen.
+          The pitch moved to /create, which is the page it was selling. */}
+      <TerminalHeader initialQuery={query} />
+
+      {/* Four live numbers answering whether anything is happening here, before
+          any board has to be read. */}
+      <ChainStats initial={top} poolCount={poolCount} />
 
       <Section
         id="screener"
