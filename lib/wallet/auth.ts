@@ -16,7 +16,17 @@ import { createContext, useContext } from "react";
  * offer a method the provider was never configured for, which fails as an
  * empty modal rather than as an error.
  */
-export type SignInMethod = "email" | "twitter" | "telegram";
+/**
+ * Telegram is gone.
+ *
+ * It never completed a sign-in here. The widget loads, the handshake runs, and
+ * it returns "Telegram auth failed or was canceled by the client", which needs
+ * the bot's domain registered against `auth.privy.io` in @BotFather and a
+ * working Telegram app config behind it. Three methods where one of them always
+ * fails is worse than two that work, and the failures are indistinguishable
+ * from the product being broken.
+ */
+export type SignInMethod = "email" | "twitter";
 
 export type WalletAuth = {
   /** Whether the provider has finished loading. Nothing should act before this. */
@@ -24,13 +34,16 @@ export type WalletAuth = {
   /** Whether someone is signed in with an email or a social account. */
   authenticated: boolean;
   /**
-   * Opens the sign-in modal.
+   * Opens Privy's sign-in modal.
    *
-   * With no argument it offers everything. With a method it opens straight
-   * into that one, which is what each button in the sheet does, so a tap on
-   * Telegram is one step rather than a tap followed by a menu.
+   * `methods` narrows what the modal offers. It is deliberately a list rather
+   * than the single method this used to take: pinning one method and prefilling
+   * it was an attempt to own the whole look of signing in, and it is also the
+   * shape Privy treats as a custom flow, where automatic wallet creation does
+   * not run. A session with no wallet is no use here, since everything past
+   * sign-in needs an address.
    */
-  login: (options?: { method?: SignInMethod; email?: string }) => void;
+  login: (options?: { methods?: SignInMethod[] }) => void;
   /** Ends the session. Callers should disconnect wagmi as well. */
   logout: () => Promise<void>;
   /** The address of the wallet held for this user, if there is one. */

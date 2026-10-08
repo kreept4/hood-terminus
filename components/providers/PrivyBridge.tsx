@@ -104,13 +104,16 @@ export function PrivyBridge({ children }: { children: ReactNode }) {
        * this is where our own vocabulary is translated into theirs, which is
        * what keeps the sheet from importing Privy at all.
        */
+      /**
+       * Narrows the modal's methods, and nothing else.
+       *
+       * The prefill went with the per-method buttons. Handing Privy an address
+       * to start from was the last piece of the custom flow, and the whole
+       * point of going back to its modal is that the modal is the path where a
+       * wallet actually gets created.
+       */
       login: (options) =>
-        login({
-          ...(options?.method ? { loginMethods: [options.method] } : {}),
-          ...(options?.email
-            ? { prefill: { type: "email" as const, value: options.email } }
-            : {}),
-        }),
+        login(options?.methods ? { loginMethods: options.methods } : {}),
       logout,
       embeddedAddress: embedded?.address ?? null,
       /**

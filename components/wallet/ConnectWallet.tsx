@@ -287,7 +287,10 @@ function SignIn({
    */
   function begin() {
     try {
-      auth.login();
+      // Email and X only. Still Privy's modal, so wallet creation applies; the
+      // list only narrows which methods it offers. Telegram is out because it
+      // never completed a sign-in, see `lib/wallet/auth.ts`.
+      auth.login({ methods: ["email", "twitter"] });
     } catch (e) {
       /**
        * Logged, not swallowed. Silence made "sign in does not work" an
@@ -356,9 +359,6 @@ function SignIn({
           </Tile>
           <Tile>
             <IconX />
-          </Tile>
-          <Tile>
-            <IconTelegram />
           </Tile>
         </span>
         <span className="min-w-0 flex-1 text-left">
@@ -1129,21 +1129,6 @@ function IconX() {
       className="shrink-0"
     >
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
-
-function IconTelegram() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path d="M21.94 4.3a1.2 1.2 0 0 0-1.24-.2L3.36 10.86c-.86.34-.82 1.58.06 1.86l4.37 1.37 1.7 5.15c.2.6.96.78 1.42.34l2.35-2.26 4.34 3.2c.5.36 1.2.09 1.33-.51l3.02-14.4a1.2 1.2 0 0 0-.4-1.31zM9.6 14.02l8.06-5.06-6.66 6.02a1.2 1.2 0 0 0-.37.72l-.24 2.02z" />
     </svg>
   );
 }
