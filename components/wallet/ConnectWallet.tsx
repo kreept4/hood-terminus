@@ -16,7 +16,7 @@ import { truncateAddress } from "@/lib/format";
 import { robinhoodChain } from "@/lib/chain";
 import { DepositSheet } from "@/components/wallet/FundingSheets";
 import { Sheet } from "@/components/wallet/Sheet";
-import { useWalletAuth, type SignInMethod } from "@/lib/wallet/auth";
+import { useWalletAuth } from "@/lib/wallet/auth";
 
 /**
  * Wallet connection.
@@ -262,7 +262,6 @@ function SignIn({
   onDone: () => void;
   showWalletDivider: boolean;
 }) {
-  const [email, setEmail] = useState("");
 
   /**
    * Never gated on the SDK being ready.
@@ -271,9 +270,24 @@ function SignIn({
    * stays false for the life of the page, and gating on it leaves the primary
    * way into the product dead with nothing that will ever revive it.
    */
-  function begin(options?: { method?: SignInMethod; email?: string }) {
+  /**
+   * Opens Privy's own modal, with no method pinned and nothing prefilled.
+   *
+   * This used to pass `loginMethods` and `prefill` so the sheet could own the
+   * whole look of signing in. That is the whitelabel path, and Privy documents
+   * that automatic wallet creation does not run on it: `createOnLogin` only
+   * applies to a login through their modal. The result was a session with no
+   * wallet attached, which is not a state this product has any use for, since
+   * every action past sign-in needs an address.
+   *
+   * So the methods are chosen in Privy's modal now. The visible cost is one
+   * extra surface in the flow. What it buys is a wallet, which is the entire
+   * reason anybody signs in here. The dashboard already decides which methods
+   * appear, so nothing about that changes.
+   */
+  function begin() {
     try {
-      auth.login(options);
+      auth.login();
     } catch (e) {
       /**
        * Logged, not swallowed. Silence made "sign in does not work" an
@@ -327,66 +341,30 @@ function SignIn({
 
   return (
     <div className="mb-5">
-      {/* One column of equal rows, each led by its mark.
-          Every method is the same size and the same shape because none of them
-          is the recommended one: which of these a person has is not something
-          we get to have an opinion about. */}
-      <div className="flex flex-col gap-2">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const value = email.trim();
-            if (!value) return;
-            begin({ method: "email", email: value });
-          }}
-          className={ROW}
-        >
+      {/* One way in, which opens Privy's modal.
+
+          Three rows used to live here, one per method, each pinning its method
+          through `loginMethods`. They looked better and they did not work: that
+          is the whitelabel path, where Privy skips wallet creation, so people
+          arrived signed in with no address and nothing they could do. The marks
+          stay as a signal of what is behind the button, because which of these
+          a person has is still not something we get to have an opinion about. */}
+      <button type="button" onClick={begin} className={ROW}>
+        <span className="flex items-center gap-1.5">
           <Tile>
             <IconMail />
           </Tile>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            autoComplete="email"
-            spellCheck={false}
-            className="min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none"
-          />
-          {/* Only once there is something to submit. An always-visible button
-              on a field nobody has typed in is a second thing to ignore. */}
-          {email.trim() !== "" && (
-            <button
-              type="submit"
-              className="tap-44 shrink-0 rounded-md bg-green px-2.5 py-1 text-micro font-semibold text-on-accent transition-opacity duration-100 hover:opacity-90"
-            >
-              Continue
-            </button>
-          )}
-        </form>
-
-        <button type="button" onClick={() => begin({ method: "twitter" })} className={ROW}>
           <Tile>
             <IconX />
           </Tile>
-          Continue with X
-        </button>
-
-        {/* Telegram, back after the CSP that was breaking it was fixed.
-            It was read at the time as Telegram rejecting the `auth.privy.io`
-            origin. It was not: `script-src` did not allow `auth.privy.io`, so
-            Privy's `telegram-login.js` was refused before the widget could
-            render, which is the same failure X had. Both hosts it needs are now
-            allowed (see `next.config.ts`). It still depends on the bot's domain
-            being registered for `auth.privy.io` in @BotFather via Privy's
-            Telegram setup; without that the widget loads and then declines. */}
-        <button type="button" onClick={() => begin({ method: "telegram" })} className={ROW}>
           <Tile>
             <IconTelegram />
           </Tile>
-          Continue with Telegram
-        </button>
-      </div>
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          Sign in with email or social
+        </span>
+      </button>
 
       {/* The only line left under the methods, and only because it was asked
           for. It answers "who is holding my keys" for the reader most likely
