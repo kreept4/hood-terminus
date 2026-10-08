@@ -141,8 +141,17 @@ export function ConnectWallet({
    * to somebody who had just signed in, so the only available reading was that
    * the sign-in had failed. It had not. Showing the identity we actually hold,
    * and explaining the missing half inside, is the honest version.
+   *
+   * Only where this button is the account, which is the nav. `signInOnly` and
+   * `walletOnly` are specific calls to action sitting side by side, and
+   * replacing both their labels with the same handle produced two identical
+   * buttons under a prompt telling somebody to sign in who already had. A
+   * button that says who you are is an account chip; one that says what it does
+   * is a control, and these are controls.
    */
-  const signedInWithoutWallet = Boolean(auth?.ready && auth?.authenticated);
+  const signedInWithoutWallet = Boolean(
+    auth?.ready && auth?.authenticated && !signInOnly && !walletOnly,
+  );
 
   return (
     <>

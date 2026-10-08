@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { http, createStorage, cookieStorage } from "wagmi";
 import { WagmiProvider as BareWagmiProvider } from "wagmi";
 import {
   usePrivy,
   useWallets,
+  useCreateWallet,
   getEmbeddedConnectedWallet,
 } from "@privy-io/react-auth";
 import {
@@ -75,6 +76,42 @@ export function PrivyBridge({ children }: { children: ReactNode }) {
   const { wallets } = useWallets();
 
   const embedded = getEmbeddedConnectedWallet(wallets);
+
+  /**
+   * Make the wallet if signing in did not.
+   *
+   * `createOnLogin: "all-users"` is set, and on this app it does not produce
+   * one: people complete a sign-in and arrive with an identity and no address,
+   * which is useless here because every action past sign-in needs one.
+   *
+   * This is not the earlier version of this code coming back. That one ran
+   * inside the login flow and blocked it, so a sign-in that could not create a
+   * wallet sat on "creating wallet" forever and nobody got in. This runs after
+   * the fact, on a session that is already complete, and the whole app renders
+   * correctly without it: if the promise never settles, the only consequence is
+   * that there is still no wallet, which is exactly where we were anyway.
+   *
+   * Once per mount, guarded by a ref rather than state so a failure cannot loop
+   * and so this never re-renders anything.
+   */
+  const createAttempted = useRef(false);
+  const { createWallet } = useCreateWallet();
+
+  useEffect(() => {
+    if (!ready || !authenticated || embedded) return;
+    if (createAttempted.current) return;
+    createAttempted.current = true;
+
+    void createWallet().catch((e: unknown) => {
+      // Loud on purpose. A silent failure here is indistinguishable from the
+      // product being broken, which is how this cost days once already.
+      console.error(
+        "[privy] Signed in, but creating an embedded wallet failed. " +
+          "Linking an external wallet still works.",
+        e,
+      );
+    });
+  }, [ready, authenticated, embedded, createWallet]);
 
   /**
    * Wallet creation is Privy's job, not ours.
