@@ -249,6 +249,46 @@ function SignIn({
     onDone();
   }
 
+  /**
+   * Signed in, but with no wallet to show for it.
+   *
+   * This sheet is reached from wagmi's `isConnected`, which needs a wallet, not
+   * an identity. Privy can hold a completed session while the account has no
+   * embedded wallet attached, which happens when wallet creation is off in the
+   * Privy dashboard, and `PrivyBridge` deliberately no longer forces one.
+   *
+   * The methods below are then dead in a way nobody could diagnose from the
+   * outside: every button calls `login`, Privy answers "already logged in, use
+   * a link helper", and the sheet does nothing at all. That is exactly what it
+   * looked like from the chair. Offering a sign-in to somebody already signed
+   * in is the dishonest state here, so say what happened and give the one
+   * control that resolves it.
+   */
+  if (auth.authenticated) {
+    return (
+      <div className="mb-5">
+        <div className="rounded-md border border-line bg-surface-2 px-4 py-4">
+          <p className="text-body text-ink">You are already signed in.</p>
+          <p className="mt-2 text-micro leading-relaxed text-ink-3">
+            This account has no wallet attached, so there is nothing to trade
+            with yet. Signing out and back in will attach one once wallet
+            creation is enabled for the app.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              void auth.logout();
+              onDone();
+            }}
+            className="mt-3 rounded-md border border-line px-3 py-2 text-body text-ink transition-colors duration-100 hover:border-green hover:text-green"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-5">
       {/* One column of equal rows, each led by its mark.
