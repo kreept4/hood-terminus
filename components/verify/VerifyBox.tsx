@@ -7,7 +7,7 @@ import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { truncateAddress } from "@/lib/format";
 import {
   useAssistantName,
-  setAssistantName,
+  useRenameAssistant,
   DEFAULT_ASSISTANT,
 } from "@/lib/assistant";
 
@@ -200,8 +200,25 @@ function ShareLink({ token }: { token: string }) {
  */
 function AssistantName() {
   const assistant = useAssistantName();
+  const { canRename, rename, reset } = useRenameAssistant();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(assistant);
+
+  /**
+   * No wallet, no name to keep.
+   *
+   * The name is stored against the wallet, so there is nowhere to put one
+   * until something is connected. Saying that is better than a control that
+   * saves into nothing, and better than hiding it with no explanation.
+   */
+  if (!canRename) {
+    return (
+      <p className="mt-3 text-micro text-ink-3">
+        Your assistant is called {DEFAULT_ASSISTANT}. Connect a wallet to give
+        him another name.
+      </p>
+    );
+  }
 
   if (!editing) {
     return (
@@ -222,7 +239,7 @@ function AssistantName() {
   }
 
   function save() {
-    setAssistantName(draft);
+    rename(draft);
     setEditing(false);
   }
 
@@ -251,7 +268,7 @@ function AssistantName() {
       <button
         type="button"
         onClick={() => {
-          setAssistantName(DEFAULT_ASSISTANT);
+          reset();
           setEditing(false);
         }}
         className="h-9 rounded-md px-2 text-micro text-ink-3 transition-colors duration-100 hover:text-ink"
