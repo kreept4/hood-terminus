@@ -14,6 +14,7 @@ import Dock from "@/components/shell/Dock";
 import {
   IconTokens,
   IconTrack,
+  IconVerify,
   IconWallet,  IconAlerts,
   IconTrade,
 } from "@/components/shell/NavIcons";
@@ -56,33 +57,34 @@ const GROUPS: readonly Group[] = [
     heading: "Market",
     items: [
       { href: "/", label: "Tokens", Icon: IconTokens },
-      /* New pairs and Trending used to be here. They are tabs on the Tokens
-         board now, so having them in the nav as well gave two controls for one
-         choice, in two places, that could disagree about which was selected.
-         One market, one set of tabs. */
+      /* Verify sits in the market group, not under "You", because checking a
+         token is part of reading the market rather than something you do to
+         your own account. */
+      { href: "/verify", label: "Verify", Icon: IconVerify },
+      { href: "/wallets", label: "Track wallets", Icon: IconTrack },
     ],
   },
   {
     heading: "You",
     items: [
-      { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
       { href: "/trade", label: "Trade", Icon: IconTrade },
+      { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
       { href: "/alerts", label: "Alerts", Icon: IconAlerts },
     ],
   },
   {
-    heading: "Watching",
-    items: [{ href: "/wallets", label: "Track wallets", Icon: IconTrack }],
+    heading: "Launch",
+    items: [{ href: "/create", label: "Launch", Icon: IconPlus }],
   },
 ];
 
-/** The dock carries five, and creating a token is the middle one. */
+/** The dock carries five, and the accented middle one is Verify. */
 const TABS: readonly (Item & { accent?: boolean })[] = [
   { href: "/", label: "Markets", Icon: IconTokens },
-  { href: "/wallets", label: "Track wallets", Icon: IconTrack },
-  { href: "/create", label: "Create", Icon: IconPlus, accent: true },
+  { href: "/wallets", label: "Wallets", Icon: IconTrack },
+  { href: "/verify", label: "Verify", Icon: IconVerify, accent: true },
   { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
-  { href: "/alerts", label: "Alerts", Icon: IconAlerts },
+  { href: "/create", label: "Launch", Icon: IconPlus },
 ];
 
 /**
@@ -171,13 +173,21 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Hidden on the create page itself. Asking someone to go somewhere
-            they already are is the most redundant button a rail can carry. */}
-        {pathname !== "/create" && (
+        {/* The one thing wearing the accent.
+            
+            It used to be "Create a token". Launching is the business model and
+            checking a token is the product: far more people arrive holding an
+            address somebody sent them than arrive wanting to mint one, and the
+            accent belongs on the thing most visitors came to do.
+            
+            Hidden on the page it leads to, because asking someone to go
+            somewhere they already are is the most redundant button a rail can
+            carry. */}
+        {pathname !== "/verify" && (
         <div className={collapsed ? "px-2 pt-8" : "px-3 pt-8"}>
           <Link
-            href="/create"
-            title={collapsed ? "Create a token" : undefined}
+            href="/verify"
+            title={collapsed ? "Verify a token" : undefined}
             className={clsx(
               "flex items-center justify-center gap-2 rounded-md bg-green",
               "text-body font-semibold text-on-accent",
@@ -185,8 +195,8 @@ export function Sidebar() {
               collapsed ? "h-11 w-full" : "px-4 py-2.5",
             )}
           >
-            <Plus />
-            {!collapsed && "Create a token"}
+            <IconVerify />
+            {!collapsed && "Verify a token"}
           </Link>
         </div>
         )}

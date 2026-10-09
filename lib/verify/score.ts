@@ -34,6 +34,14 @@ const list = (items: string[]) =>
 export type Findings = {
   info: TokenInfo | null;
   pool: MarketPool | null;
+  /**
+   * A pool was located and could be simulated against, from the market feed or
+   * from the factory. Distinct from `pool`, which is only the market feed's
+   * view: the fallback finds a pool the feed knows nothing about, and the sell
+   * check has to key off whether there was anything to test rather than off
+   * whether a data provider happened to describe it.
+   */
+  poolFound: boolean;
   /** The pool list itself could not be fetched, as distinct from the token having no pools. */
   marketUnavailable: boolean;
   facts: ContractFacts | null;
@@ -41,12 +49,20 @@ export type Findings = {
   sim: SimulationOutcome | null;
 };
 
-export function buildChecks({ info, pool, marketUnavailable, facts, hook, sim }: Findings): Check[] {
+export function buildChecks({
+  info,
+  pool,
+  poolFound,
+  marketUnavailable,
+  facts,
+  hook,
+  sim,
+}: Findings): Check[] {
   const checks: Check[] = [];
   const venue = pool ? pool.name : "its main pool";
 
   /* Selling: the one check everything else is secondary to. */
-  if (!pool) {
+  if (!poolFound) {
     checks.push({
       id: "sell",
       label: "Test sell",
@@ -60,7 +76,19 @@ export function buildChecks({ info, pool, marketUnavailable, facts, hook, sim }:
       id: "sell",
       label: "Test sell",
       status: "unknown",
-      detail: `Couldn't run a test trade through ${venue}. This is not a pass.`,
+      /**
+       * The reason is shown, not swallowed.
+       *
+       * "Couldn't run a test trade" on its own is the least useful sentence
+       * this product can print: it reads as the tool being broken, and gives
+       * nobody anything to act on or report. The simulator already records why
+       * it stopped, and some of those reasons are the answer rather than an
+       * excuse. A pool whose quote asset cannot be funded is a pool a buyer
+       * would struggle in too.
+       */
+      detail: sim?.failure
+        ? `Couldn't run a test trade through ${venue}: ${sim.failure}. This is not a pass.`
+        : `Couldn't run a test trade through ${venue}. This is not a pass.`,
     });
   } else if (sim.sellBlocked) {
     checks.push({

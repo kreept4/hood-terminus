@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { clsx } from "@/lib/clsx";
 import { ErrorPanel, SkeletonRows } from "@/components/primitives/States";
 import type { Check, VerifyReport } from "@/lib/verify/types";
@@ -73,6 +74,17 @@ function CheckRow({ check }: { check: Check }) {
 export function VerifyPanel({ token, className }: { token: string; className?: string }) {
   const { data: report, error, isPending, isFetching, refetch } = useVerify(token);
 
+  /**
+   * Open by default, and collapsible.
+   *
+   * The verdict and the headline are the answer; the seven checks underneath
+   * are the working. Somebody who has read the verdict and wants the chart back
+   * should be able to fold it away, and somebody who disagrees with the verdict
+   * should be able to see exactly what produced it. Collapsed state is not
+   * remembered: the next token is a different question.
+   */
+  const [open, setOpen] = useState(true);
+
   return (
     <section
       id="verify"
@@ -80,28 +92,57 @@ export function VerifyPanel({ token, className }: { token: string; className?: s
       className={clsx("rounded-sm border border-line bg-surface", className)}
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <h2 id="verify-title" className="text-small text-ink-2">
-            Verify
+            Travis
           </h2>
           {report && <Mark className={VERDICT_TONE[report.verdict]}>{VERDICT_WORD[report.verdict]}</Mark>}
+          {report && (
+            <span className="truncate text-micro text-ink-3">
+              checked {ago(report.checkedAt)}
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="text-micro text-ink-3 transition-colors duration-100 hover:text-ink disabled:hover:text-ink-3"
-        >
-          {isFetching ? "Checking" : report ? `Checked ${ago(report.checkedAt)}` : "Check"}
-        </button>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Worth a button of its own on a new token.
+
+              A report is cached for a minute, and a token minted ten minutes
+              ago can change what it allows between one check and the next.
+              Somebody watching a launch needs to ask again on their own
+              schedule rather than wait out a cache. */}
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label="Check again"
+            title="Check again"
+            className="tap-44 flex h-7 w-7 items-center justify-center rounded-md text-ink-3 transition-colors duration-100 hover:bg-surface-2 hover:text-ink disabled:hover:bg-transparent disabled:hover:text-ink-3"
+          >
+            <IconRefresh spinning={isFetching} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="verify-body"
+            aria-label={open ? "Hide the checks" : "Show the checks"}
+            title={open ? "Hide the checks" : "Show the checks"}
+            className="tap-44 flex h-7 w-7 items-center justify-center rounded-md text-ink-3 transition-colors duration-100 hover:bg-surface-2 hover:text-ink"
+          >
+            <IconChevron open={open} />
+          </button>
+        </div>
       </header>
 
+      <div id="verify-body" hidden={!open}>
       {isPending ? (
         <SkeletonRows rows={6} height={44} />
       ) : error || !report ? (
-        <ErrorPanel title={error instanceof Error ? error.message : "Verify could not run."} onRetry={() => refetch()} />
+        <ErrorPanel title={error instanceof Error ? error.message : "Travis could not run."} onRetry={() => refetch()} />
       ) : (
         <>
+          <p className="px-4 pb-1 text-micro text-ink-3">Here is what Travis thinks</p>
           <p className="px-4 pb-3 text-body text-ink">{report.headline}</p>
           <CostStrip report={report} />
           <ul className="divide-y divide-line-soft border-t border-line-soft">
@@ -117,7 +158,48 @@ export function VerifyPanel({ token, className }: { token: string; className?: s
           </footer>
         </>
       )}
+      </div>
     </section>
+  );
+}
+
+/** Spins while a check is running, so the button reports its own state. */
+function IconRefresh({ spinning }: { spinning: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={clsx("shrink-0", spinning && "animate-spin")}
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+
+function IconChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={clsx("shrink-0 transition-transform duration-150", open && "rotate-180")}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
   );
 }
 
