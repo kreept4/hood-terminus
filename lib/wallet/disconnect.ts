@@ -120,3 +120,14 @@ export function clearWagmiPersistence() {
     // Site data blocked. There is then no cookie to clear.
   }
 }
+
+/** Whether wagmi has a connection persisted for this browser. */
+export function hasWagmiPersistence(): boolean {
+  try {
+    return WAGMI_KEYS.some((name) =>
+      document.cookie.split(";").some((c) => c.trim().startsWith(`${name}=`)),
+    );
+  } catch {
+    return false;
+  }
+}

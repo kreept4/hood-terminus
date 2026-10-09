@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
 import {
   clearWagmiPersistence,
+  hasWagmiPersistence,
   useDisconnectAll,
   wasDisconnected,
 } from "@/lib/wallet/disconnect";
@@ -82,12 +83,8 @@ export function SessionGuard() {
   const { isConnected } = useAccount();
   const disconnectAll = useDisconnectAll();
 
-  // The session question is answered once. The disconnect flag is not: wagmi
-  // reconnects after this first runs, so that check has to survive and catch it.
-  const sessionDecided = useRef(false);
-
-  // Read before the heartbeat below overwrites it, and on the first render,
-  // which is the only moment the previous session's gap is still legible.
+  // Read during the first render, before the heartbeat below overwrites it.
+  // This is the only moment the previous session's gap is still legible.
   const gapAtMount = useRef<number | null | undefined>(undefined);
   if (gapAtMount.current === undefined) gapAtMount.current = sinceLastBeat();
 
@@ -106,23 +103,23 @@ export function SessionGuard() {
     };
   }, []);
 
+  /**
+   * The session question is asked once, at mount, and never again.
+   *
+   * It used to be asked when a connection appeared, which broke connecting.
+   * The marker was only written inside that branch, so a tab that had never
+   * held a connection had no marker. Somebody clicked connect, approved it in
+   * their wallet, and this effect then woke up, found no marker, concluded the
+   * connection had been carried over from a previous session and ended the one
+   * they had just made. The second attempt worked because the first had left
+   * the marker behind. Asking at mount means the answer is already settled by
+   * the time anybody clicks anything.
+   *
+   * It also no longer waits for wagmi to say it is connected. What has to be
+   * undone is the persisted record, and that can be read directly, before
+   * wagmi has finished reconnecting from it.
+   */
   useEffect(() => {
-    if (!isConnected) return;
-
-    /**
-     * Asked to be disconnected, and reconnected anyway.
-     *
-     * Not once per mount: wagmi reconnects after this first runs, so the flag
-     * has to be honoured every time a connection appears, until the person
-     * connects deliberately.
-     */
-    if (wasDisconnected()) {
-      end({ remember: false });
-      return;
-    }
-
-    if (sessionDecided.current) return;
-
     let marker = false;
     try {
       marker = sessionStorage.getItem(MARKER) !== null;
@@ -130,53 +127,55 @@ export function SessionGuard() {
     } catch {
       // Site data blocked. Treat it as a continuing session rather than
       // disconnecting somebody on every single page view.
-      sessionDecided.current = true;
       return;
     }
 
-    sessionDecided.current = true;
-
-    // `undefined` cannot reach here, since it is read on the first render,
-    // and it would mean the same thing as `null` anyway: no answer.
+    // `undefined` cannot reach here, since it is read on the first render, and
+    // it would mean the same thing as `null` anyway: no answer.
     const gap = gapAtMount.current ?? null;
 
-    if (isNewSession({ marker, gap })) end({ remember: true });
+    // Nothing persisted means nothing to carry over, so there is nothing to
+    // end and no reason to reload a page that is already clean.
+    if (!isNewSession({ marker, gap }) || !hasWagmiPersistence()) return;
 
     /**
-     * Ending a session, in the only order that holds.
+     * Ending it, in the only order that holds.
      *
-     * Disconnecting alone does not work. A wallet discovered over EIP-6963
-     * cannot be given `shimDisconnect`, so wagmi reconnects it on the next
-     * mount and the connection count never moves. Rabby did exactly that
-     * through two previous attempts at this.
-     *
-     * So the persisted record goes first, because that is the part a connector
-     * cannot put back: no cookie means nothing for the server to render as
-     * connected and nothing for wagmi to reconnect from. The reload is what
-     * makes the current page agree with that, and it is guarded so it can
-     * happen at most once per tab however many times this runs.
+     * The persisted record goes first, because that is the part a connector
+     * cannot put back: a wallet discovered over EIP-6963 cannot be given
+     * `shimDisconnect`, so wagmi reconnects it on the next mount and a plain
+     * disconnect never sticks. The reload is what makes the current page agree,
+     * and it is guarded so it happens at most once per tab.
      */
-    function end({ remember }: { remember: boolean }) {
-      try {
-        sessionStorage.setItem(MARKER, "1");
-      } catch {
-        // Then the reload guard below is the only thing preventing a loop.
-      }
+    clearWagmiPersistence();
+    void disconnectAll({ remember: false });
 
-      clearWagmiPersistence();
-      void disconnectAll({ remember });
-
-      let reloaded = false;
-      try {
-        reloaded = sessionStorage.getItem(RELOADED) !== null;
+    try {
+      if (sessionStorage.getItem(RELOADED) === null) {
         sessionStorage.setItem(RELOADED, "1");
-      } catch {
-        // Without a guard a reload could repeat, so do not reload at all.
-        return;
+        location.reload();
       }
-
-      if (!reloaded) location.reload();
+    } catch {
+      // Without a guard a reload could repeat, so do not reload at all.
     }
+    // Deliberately once per mount: this is a question about how the page was
+    // opened, not about the connection, which may arrive long afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Asked to be disconnected, and reconnected anyway.
+   *
+   * Separate from the question above because it is a standing instruction, not
+   * a one-off: wagmi reconnects after the first pass, so the flag is honoured
+   * every time a connection appears until somebody connects deliberately, which
+   * is what clears it.
+   */
+  useEffect(() => {
+    if (!isConnected) return;
+    if (!wasDisconnected()) return;
+    clearWagmiPersistence();
+    void disconnectAll({ remember: false });
   }, [isConnected, disconnectAll]);
 
   return null;
