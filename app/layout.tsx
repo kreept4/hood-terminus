@@ -94,6 +94,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
+      /* The loader script below adds `ht-loaded` to this element before React
+         hydrates, which is the point of it: a session that has already seen the
+         loader must not paint it again, and waiting for React would be too
+         late. React then finds a class on `html` that it did not render and
+         reports a hydration mismatch.
+
+         This is what the attribute is for, and it is narrow: it covers this
+         element's own attributes and nothing inside it, so a real mismatch
+         anywhere in the tree is still reported. */
+      suppressHydrationWarning
     >
       <head>
         {/* Runs before first paint, so a session that has already seen the
