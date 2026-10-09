@@ -3,36 +3,74 @@
 import { useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
 import { useDisconnectAll, wasDisconnected } from "@/lib/wallet/disconnect";
+import { isNewSession } from "@/lib/wallet/session";
 
 /**
  * A connected wallet lasts for the session and no longer.
  *
- * wagmi already writes its state to a cookie with no expiry, which a browser is
- * meant to drop when it closes. In practice it often does not: Chrome keeps
- * running after its last window is shut, and "continue where you left off"
- * restores session cookies on purpose. So somebody comes back to the site hours
- * later and is still connected, which is not what anybody expects.
+ * wagmi writes its state to a cookie with no expiry, which a browser is meant
+ * to drop when it closes and in practice often does not: Chrome keeps running
+ * after its last window shuts, and "continue where you left off" restores
+ * session cookies deliberately. So somebody came back hours later and was still
+ * connected, which is not what anybody expects.
  *
  * What is actually at stake is worth being accurate about. Being connected does
  * not let this site spend anything: every transaction is signed in the wallet,
- * and the wallet's own lock is what protects the money. What it does leak is the
+ * and the wallet's own lock is what protects the money. What it leaks is the
  * address and the portfolio behind it, to whoever opens the laptop next. That is
  * a real problem on a shared machine and the reason this exists.
  *
- * `sessionStorage` is the one browser store with exactly the lifetime wanted: it
- * survives a reload and same-tab navigation, and is dropped when the tab closes,
- * whatever the browser does with cookies. So the rule is: if wagmi thinks we are
- * connected but this tab has no marker, the connection came from a previous
- * session and is ended.
+ * Two signals, because neither is enough on its own.
  *
- * The cost, stated plainly: `sessionStorage` is per tab, so opening the site in
- * a second tab is a new session and disconnects the first. That is the price of
- * the guarantee, and it is the right way round. Being asked to reconnect once in
- * a while is a small annoyance; finding somebody else's wallet already connected
- * is not.
+ * A `sessionStorage` marker catches a new tab, since a tab starts with its own
+ * empty store. It does not catch a restored one: Chrome brings `sessionStorage`
+ * back with a tab reopened from history or restored at startup, so the marker
+ * returns and the session looks continuous when the browser was in fact closed.
+ * That was the hole, and the reason closing a tab was not enough.
+ *
+ * So a heartbeat in `localStorage` records that some tab was alive a moment ago.
+ * A restored tab carries a marker but the heartbeat shows the gap, and a gap
+ * means nothing was running, whatever the marker says.
+ *
+ * The costs, stated plainly. `sessionStorage` is per tab, so opening the site in
+ * a second tab is a new session and disconnects the first. And closing
+ * everything and coming back inside the grace window below leaves you
+ * connected. Both are the price of not disconnecting somebody on every reload,
+ * and they are the right way round: being asked to reconnect now and then is a
+ * small annoyance, finding somebody else's wallet connected is not.
  */
 
 const MARKER = "ht:session";
+const HEARTBEAT = "ht:seen";
+
+/**
+ * How often a live tab says it is alive.
+ *
+ * Well inside the gap that `isNewSession` allows, which is where that
+ * threshold and the reasoning behind it now live.
+ */
+const BEAT_MS = 10_000;
+
+function beat() {
+  try {
+    localStorage.setItem(HEARTBEAT, String(Date.now()));
+  } catch {
+    // Site data blocked. Nothing to record, and nothing below depends on it.
+  }
+}
+
+/** Milliseconds since any tab last checked in, or null when none ever has. */
+function sinceLastBeat(): number | null {
+  try {
+    const seen = Number(localStorage.getItem(HEARTBEAT));
+    if (!Number.isFinite(seen) || seen <= 0) return null;
+    // A clock moved backwards reads as the future. Treat that as no answer
+    // rather than as a gap, which would disconnect for no reason.
+    return Math.max(0, Date.now() - seen);
+  } catch {
+    return null;
+  }
+}
 
 export function SessionGuard() {
   const { isConnected } = useAccount();
@@ -41,6 +79,26 @@ export function SessionGuard() {
   // The session question is answered once. The disconnect flag is not: wagmi
   // reconnects after this first runs, so that check has to survive and catch it.
   const sessionDecided = useRef(false);
+
+  // Read before the heartbeat below overwrites it, and on the first render,
+  // which is the only moment the previous session's gap is still legible.
+  const gapAtMount = useRef<number | null | undefined>(undefined);
+  if (gapAtMount.current === undefined) gapAtMount.current = sinceLastBeat();
+
+  // Kept running whether or not anybody is connected, because the next tab to
+  // open needs to know this one was here.
+  useEffect(() => {
+    beat();
+    const id = setInterval(beat, BEAT_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") beat();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -62,9 +120,9 @@ export function SessionGuard() {
 
     if (sessionDecided.current) return;
 
-    let fresh = false;
+    let marker = false;
     try {
-      fresh = sessionStorage.getItem(MARKER) === null;
+      marker = sessionStorage.getItem(MARKER) !== null;
       sessionStorage.setItem(MARKER, "1");
     } catch {
       // Site data blocked. Treat it as a continuing session rather than
@@ -74,9 +132,13 @@ export function SessionGuard() {
     }
 
     sessionDecided.current = true;
-    // A new tab inherits no session, so a connection carried in by a cookie
-    // belongs to a previous one. Remembered, so the reconnect does not undo it.
-    if (fresh) void disconnectAll();
+
+    // `undefined` cannot reach here, since it is read on the first render,
+    // and it would mean the same thing as `null` anyway: no answer.
+    const gap = gapAtMount.current ?? null;
+
+    // Remembered, so wagmi's reconnect on the next render does not undo it.
+    if (isNewSession({ marker, gap })) void disconnectAll();
   }, [isConnected, disconnectAll]);
 
   return null;
