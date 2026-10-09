@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { cookieToInitialState } from "wagmi";
 import { Analytics } from "@vercel/analytics/next";
 import { Web3Providers } from "@/components/providers/Web3Providers";
+import { SessionGuard } from "@/components/providers/SessionGuard";
 import { wagmiConfig } from "@/lib/wagmi";
 import { NetworkGuard } from "@/components/wallet/NetworkGuard";
 import type { Metadata, Viewport } from "next";
@@ -102,6 +103,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full">
         <PageLoader />
         <Web3Providers initialState={initialState}>
+          {/* Inside the provider, because it reads and ends the connection. */}
+          <SessionGuard />
           <SidebarProvider>
             <Sidebar />
             {/* The rail is fixed, so the content column is inset rather than
