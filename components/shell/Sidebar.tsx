@@ -17,6 +17,7 @@ import {
   IconVerify,
   IconWallet,  IconAlerts,
   IconTrade,
+  IconSettings,
 } from "@/components/shell/NavIcons";
 
 /**
@@ -56,8 +57,14 @@ type Item = {
  * somebody else. An ungrouped rail made "Trending" and "Portfolio" look like
  * the same kind of thing, which they are not.
  *
- * The group headings only exist when the rail is expanded. Collapsed, the
- * dividers between groups carry the same information without the words.
+ * The groups are drawn with dividers and nothing else. They used to carry
+ * headings when the rail was expanded, which was three words labelling three
+ * or four self-evident items: nobody needed telling that Tokens and Verify
+ * are about the market. The rule the collapsed rail already followed, that
+ * the divider is the grouping, turned out to be the right one at both widths.
+ *
+ * `heading` stays because it keys the group and names it in the code. It is
+ * no longer rendered.
  */
 type Group = { heading: string; items: readonly Item[] };
 
@@ -79,6 +86,7 @@ const GROUPS: readonly Group[] = [
       { href: "/trade", label: "Trade", Icon: IconTrade },
       { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
       { href: "/alerts", label: "Alerts", Icon: IconAlerts },
+      { href: "/settings", label: "Settings", Icon: IconSettings },
     ],
   },
   {
@@ -223,11 +231,6 @@ export function Sidebar() {
                 i > 0 && "mt-5 border-t border-line-soft pt-5",
               )}
             >
-              {!collapsed && (
-                <p className="mb-2 px-3 text-micro text-ink-3">
-                  {group.heading}
-                </p>
-              )}
               <Group
                 items={group.items}
                 pathname={pathname}

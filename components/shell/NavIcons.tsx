@@ -143,3 +143,14 @@ export function IconTrack({ className }: IconProps) {
     </Svg>
   );
 }
+
+/** Settings: sliders, because these are levels rather than switches. */
+export function IconSettings({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </svg>
+  );
+}
