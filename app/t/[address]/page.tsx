@@ -86,6 +86,18 @@ export async function generateMetadata({ params }: Params) {
 
 export default async function TokenPage({ params }: Params) {
   const { address } = await params;
+
+  /**
+   * The candles are asked for before the pool is looked up, not after it.
+   *
+   * Every link into this page is built from a pool address, so this request
+   * does not need the lookup's answer, and waiting for it turned one round
+   * trip into two against a rate limited API. The catch is what makes starting
+   * early safe: if this is not a pool address the answer is thrown away rather
+   * than becoming an unhandled rejection.
+   */
+  const candlesEarly = getCandles(address, "1h").catch(() => null);
+
   let found = await getPoolWithLogo(address);
 
   /**
@@ -115,12 +127,17 @@ export default async function TokenPage({ params }: Params) {
   }
   const { pool, logo } = found;
 
-  const [candles, markets] = await Promise.all([
-    getCandles(pool.address, "1h"),
+  // The early request is only reusable if it asked about this same pool, which
+  // it did unless the lookup resolved to a different one.
+  const samePool = pool.address.toLowerCase() === address.toLowerCase();
+
+  const [candlesMaybe, markets] = await Promise.all([
+    samePool ? candlesEarly : getCandles(pool.address, "1h"),
     pool.baseTokenAddress
       ? getPoolsForToken(pool.baseTokenAddress)
       : Promise.resolve([]),
   ]);
+  const candles = candlesMaybe ?? (await getCandles(pool.address, "1h"));
 
   const others = markets.filter(
     (m) => m.address.toLowerCase() !== pool.address.toLowerCase(),
