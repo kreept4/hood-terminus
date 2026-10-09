@@ -11,7 +11,8 @@
     "set:quotes": "hardhat run scripts/set-quotes.ts --network robinhood",
     "rehearse:v2": "hardhat run scripts/rehearse-v2.ts",
     "transfer:owner": "hardhat run scripts/transfer-ownership.ts --network robinhood",
-    "set:fee": "hardhat run scripts/set-launch-fee.ts --network robinhood"
+    "set:fee": "hardhat run scripts/set-launch-fee.ts --network robinhood",
+    "set:creator-share": "hardhat run scripts/set-creator-share.ts --network robinhood"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",

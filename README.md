@@ -80,6 +80,7 @@ Version 1 was built between September 3 and September 11, 2026, before the hacka
 - **Resilience and honesty in the data layer** (October 2026): market requests back off and fall back to the last good answer, so a rate limit degrades to slightly old data rather than an empty chart, and a failed load says it failed instead of claiming a pool has no history.
 - **Plain language, and claims checked against the contract** (October 2026): the launchpad no longer promises fees after graduation, which it never paid, and the fee split is read from the chain rather than written down.
 - **Wallets only** (October 2026): the embedded-wallet sign-in was removed after it proved unable to create a wallet on this app, and the terms and privacy notice were rewritten to match.
+- **A session that ends when you leave** (October 2026): a connected wallet lasts for the browser session and no longer, and Disconnect ends every authorised wallet rather than promoting the next one. Neither was a route to spending, since transactions are signed in the wallet; what was exposed was the address and the portfolio behind it to whoever opened the laptop next.
 
 ## License
 

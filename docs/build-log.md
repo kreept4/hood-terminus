@@ -124,3 +124,48 @@ timeframe after the retry and stale-cache change, and 1m returns 300 candles on
 six consecutive calls with no duplicate timestamps and 299 ascending steps.
 Launchpad figures read live from the contract: `TRADE_FEE_BPS` 100,
 `creatorShareBps` 6000, `MIN_CREATOR_SHARE_BPS` 5000, `GRADUATION_ETH` 4 ether.
+
+## Phase 5 and 6: the session, the wallet, and measurement
+
+**Date:** October 9, 2026
+
+**What changed**
+
+A connected wallet now lasts for the session and no longer. wagmi writes its
+state to a cookie with no expiry, which a browser is meant to drop when it
+closes and in practice often does not: Chrome keeps running after its last
+window shuts, and "continue where you left off" restores session cookies
+deliberately. So somebody came back hours later still connected.
+
+Worth being accurate about the stake. Being connected is not a route to
+spending, because every transaction is signed in the wallet and the wallet's own
+lock is what protects the money. What it leaks is the address and the portfolio
+behind it, to whoever opens the laptop next. `sessionStorage` is the one browser
+store with the lifetime wanted, surviving a reload and same-tab navigation and
+dropped when the tab closes, so the rule is: connected with no marker in this
+tab means the connection came from a previous session, and it is ended. The cost
+is that a second tab is a new session and disconnects the first, which is the
+right way round.
+
+Disconnect also did not disconnect, for two separate reasons. wagmi keeps a map
+of simultaneous connections and `disconnect()` with no argument ends only the
+active one, so with several wallets authorised, pressing Disconnect ended the
+first and promoted the next, which is the second wallet that kept appearing.
+Fixing that exposed the second reason: wagmi reconnects on mount, and
+`shimDisconnect` is what tells a connector not to. It is set on the `injected()`
+fallback and cannot be set on connectors built from EIP-6963 announcements,
+which is every wallet anybody actually has installed. A disconnect held until
+the next render and then undid itself. There is now an app-side record of the
+request, set before disconnecting so a wallet that hangs cannot lose it, and
+honoured on every connection that appears until somebody picks a wallet.
+
+Vercel Analytics, which counts page views without a cookie or a cross-site
+profile, and the privacy notice says so in those terms.
+
+**What was tested**
+
+Lint, typecheck and the 14 unit tests pass, and `next build` completes. The
+disconnect path was traced by hand across the connection map rather than in a
+browser automation harness: the fault only appears with EIP-6963 connectors from
+real extensions, and a fresh automated browser has none, so it would exercise
+only the fallback connector that was never broken.
