@@ -84,3 +84,39 @@ export function useDisconnectAll(): (options?: { remember?: boolean }) => Promis
     [config, disconnectAsync],
   );
 }
+
+/**
+ * The names wagmi persists its connection under.
+ *
+ * `wagmiConfig` uses `cookieStorage`, so these are cookies rather than
+ * localStorage entries. They are what the server reads to render a page as
+ * connected, and what wagmi reconnects from on mount.
+ */
+const WAGMI_KEYS = ["wagmi.store", "wagmi.recentConnectorId"];
+
+/**
+ * Removes wagmi's own record of the connection.
+ *
+ * Asking a connector to disconnect is not enough, and this is the lesson the
+ * last two attempts at this taught. A wallet discovered over EIP-6963, which is
+ * every wallet anybody actually has installed, cannot be given `shimDisconnect`
+ * and will reconnect the moment wagmi asks it to on the next mount. Rabby does
+ * exactly that: disconnect it and it is back before the frame is over, so the
+ * connection count sits at one and nothing appears to have happened.
+ *
+ * Deleting the persisted record is the part a connector cannot undo. With no
+ * cookie there is nothing for the server to render as connected and nothing for
+ * wagmi to reconnect from, so the next load starts clean.
+ */
+export function clearWagmiPersistence() {
+  try {
+    for (const name of WAGMI_KEYS) {
+      // Both forms, because a cookie set without an explicit path is scoped to
+      // the directory it was set from and will not be matched by a path=/ kill.
+      document.cookie = `${name}=; Max-Age=0; path=/`;
+      document.cookie = `${name}=; Max-Age=0`;
+    }
+  } catch {
+    // Site data blocked. There is then no cookie to clear.
+  }
+}

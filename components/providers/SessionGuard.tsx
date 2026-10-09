@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
-import { useDisconnectAll, wasDisconnected } from "@/lib/wallet/disconnect";
+import {
+  clearWagmiPersistence,
+  useDisconnectAll,
+  wasDisconnected,
+} from "@/lib/wallet/disconnect";
 import { isNewSession } from "@/lib/wallet/session";
 
 /**
@@ -42,6 +46,8 @@ import { isNewSession } from "@/lib/wallet/session";
 
 const MARKER = "ht:session";
 const HEARTBEAT = "ht:seen";
+/** Guards the one reload that ends a session, so it can never repeat. */
+const RELOADED = "ht:reset";
 
 /**
  * How often a live tab says it is alive.
@@ -106,15 +112,12 @@ export function SessionGuard() {
     /**
      * Asked to be disconnected, and reconnected anyway.
      *
-     * This is not once per mount. wagmi reconnects on mount, often after this
-     * effect has already run, so the flag has to be honoured every time a
-     * connection appears until the person connects deliberately.
-     *
-     * `remember: false` because this is us enforcing their earlier decision,
-     * not a new one, and rewriting the flag would be noise.
+     * Not once per mount: wagmi reconnects after this first runs, so the flag
+     * has to be honoured every time a connection appears, until the person
+     * connects deliberately.
      */
     if (wasDisconnected()) {
-      void disconnectAll({ remember: false });
+      end({ remember: false });
       return;
     }
 
@@ -137,8 +140,43 @@ export function SessionGuard() {
     // and it would mean the same thing as `null` anyway: no answer.
     const gap = gapAtMount.current ?? null;
 
-    // Remembered, so wagmi's reconnect on the next render does not undo it.
-    if (isNewSession({ marker, gap })) void disconnectAll();
+    if (isNewSession({ marker, gap })) end({ remember: true });
+
+    /**
+     * Ending a session, in the only order that holds.
+     *
+     * Disconnecting alone does not work. A wallet discovered over EIP-6963
+     * cannot be given `shimDisconnect`, so wagmi reconnects it on the next
+     * mount and the connection count never moves. Rabby did exactly that
+     * through two previous attempts at this.
+     *
+     * So the persisted record goes first, because that is the part a connector
+     * cannot put back: no cookie means nothing for the server to render as
+     * connected and nothing for wagmi to reconnect from. The reload is what
+     * makes the current page agree with that, and it is guarded so it can
+     * happen at most once per tab however many times this runs.
+     */
+    function end({ remember }: { remember: boolean }) {
+      try {
+        sessionStorage.setItem(MARKER, "1");
+      } catch {
+        // Then the reload guard below is the only thing preventing a loop.
+      }
+
+      clearWagmiPersistence();
+      void disconnectAll({ remember });
+
+      let reloaded = false;
+      try {
+        reloaded = sessionStorage.getItem(RELOADED) !== null;
+        sessionStorage.setItem(RELOADED, "1");
+      } catch {
+        // Without a guard a reload could repeat, so do not reload at all.
+        return;
+      }
+
+      if (!reloaded) location.reload();
+    }
   }, [isConnected, disconnectAll]);
 
   return null;
