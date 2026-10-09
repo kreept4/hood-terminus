@@ -20,12 +20,16 @@ export default function VerifyPage() {
     <div className="gutter py-8 md:py-10">
       <header className="max-w-2xl">
         <h1 className="text-h1 leading-none font-bold tracking-tight text-ink">
-          Can I sell it?
+          Check a token
         </h1>
-        <p className="mt-4 text-lead text-ink-2">
-          Paste a token address. We buy about ten dollars of it and sell it
-          straight back through its own pool, on chain, and tell you what
-          happened. Nothing is signed and nothing is spent.
+        <p className="mt-4 text-body text-ink-2 md:text-lead">
+          Paste a token address. The test tries to sell the token and reports
+          what happened, so you find out whether you could get out before you
+          put money in.
+        </p>
+        <p className="mt-3 text-micro text-ink-3">
+          The test runs on a copy of the blockchain. Your money is not used,
+          your wallet is not connected to it, and nothing is bought or sold.
         </p>
       </header>
 

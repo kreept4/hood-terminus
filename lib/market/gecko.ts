@@ -209,9 +209,37 @@ function queued<T>(run: () => Promise<T>): Promise<T> {
   return next;
 }
 
+/**
+ * How many times to wait out a rate limit, and for how long.
+ *
+ * One retry was not enough. This upstream is a free tier and every request in
+ * this process shares its budget: a single token page asks for the pool, its
+ * candles, its other markets, the token's info and the token's pools, so a
+ * handful of readers is all it takes to start collecting 429s. Each one became
+ * a null, and a null became an empty chart reading "no candles for this
+ * timeframe yet" on a pair with eight million dollars of daily volume.
+ *
+ * Backing off three times costs a slow page in the worst case. Giving up costs
+ * a product that looks like it has no data, which is worse, and which is what
+ * it was doing.
+ */
+const RETRY_MS = [600, 1500, 3000] as const;
+
+/**
+ * The last good answer for a path, kept so a rate limit degrades to stale data
+ * rather than to nothing.
+ *
+ * Next's own `revalidate` cache does not help here: it serves what it has until
+ * it expires, and then a failed refresh is still a failure. This is the floor
+ * underneath that. Market data minutes old is worth far more than an empty
+ * chart, as long as nothing claims it is live.
+ */
+const lastGood = new Map<string, { at: number; value: unknown }>();
+const STALE_MS = 10 * 60_000;
+
 async function get<T>(path: string, revalidate: number): Promise<T | null> {
-  return queued(async () => {
-    for (let attempt = 0; attempt < 2; attempt++) {
+  const fresh = await queued(async () => {
+    for (let attempt = 0; attempt <= RETRY_MS.length; attempt++) {
       try {
         const res = await fetch(`${BASE}${path}`, {
           headers: { accept: "application/json" },
@@ -219,8 +247,8 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
         });
 
         // The one status worth waiting out. Everything else is an answer.
-        if (res.status === 429 && attempt === 0) {
-          await new Promise((r) => setTimeout(r, 1200));
+        if (res.status === 429 && attempt < RETRY_MS.length) {
+          await new Promise((r) => setTimeout(r, RETRY_MS[attempt]));
           continue;
         }
 
@@ -234,6 +262,15 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
     }
     return null;
   });
+
+  if (fresh !== null) {
+    lastGood.set(path, { at: Date.now(), value: fresh });
+    return fresh;
+  }
+
+  const held = lastGood.get(path);
+  if (held && Date.now() - held.at < STALE_MS) return held.value as T;
+  return null;
 }
 
 type IncludedToken = {

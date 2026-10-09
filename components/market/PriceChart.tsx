@@ -126,6 +126,10 @@ export function PriceChart({
   const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
   const [candles, setCandles] = useState<Candle[]>(initialCandles);
   const [loading, setLoading] = useState(false);
+  // Whether the last attempt to load candles failed, as opposed to succeeding
+  // and finding none. The two look identical on screen and mean opposite
+  // things: one is our problem and the other is the pool's.
+  const [failed, setFailed] = useState(false);
   const [logScale, setLogScale] = useState(false);
   const [active, setActive] = useState<Set<Overlay>>(new Set(["ema21"]));
   const [hover, setHover] = useState<Candle | null>(null);
@@ -305,11 +309,15 @@ export function PriceChart({
     if (tf === timeframe) return;
     setTimeframe(tf);
     setLoading(true);
+    setFailed(false);
     try {
       const res = await fetch(
         `/api/candles?pool=${poolAddress}&tf=${tf}`,
       );
       if (res.ok) setCandles((await res.json()) as Candle[]);
+      else setFailed(true);
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -418,7 +426,9 @@ export function PriceChart({
         {!loading && candles.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-body text-ink-3">
-              No candles for this timeframe yet
+              {failed
+                ? "Could not load the chart. Try another timeframe."
+                : "No price history for this timeframe."}
             </span>
           </div>
         )}
