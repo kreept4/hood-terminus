@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
-import { useDisconnectAll } from "@/lib/wallet/disconnect";
+import { useDisconnectAll, wasDisconnected } from "@/lib/wallet/disconnect";
 
 /**
  * A connected wallet lasts for the session and no longer.
@@ -38,12 +38,29 @@ export function SessionGuard() {
   const { isConnected } = useAccount();
   const disconnectAll = useDisconnectAll();
 
-  // Once per mount. Without the guard a disconnect would re-run this effect
-  // through `isConnected` and fight the user's next reconnect.
-  const decided = useRef(false);
+  // The session question is answered once. The disconnect flag is not: wagmi
+  // reconnects after this first runs, so that check has to survive and catch it.
+  const sessionDecided = useRef(false);
 
   useEffect(() => {
-    if (decided.current) return;
+    if (!isConnected) return;
+
+    /**
+     * Asked to be disconnected, and reconnected anyway.
+     *
+     * This is not once per mount. wagmi reconnects on mount, often after this
+     * effect has already run, so the flag has to be honoured every time a
+     * connection appears until the person connects deliberately.
+     *
+     * `remember: false` because this is us enforcing their earlier decision,
+     * not a new one, and rewriting the flag would be noise.
+     */
+    if (wasDisconnected()) {
+      void disconnectAll({ remember: false });
+      return;
+    }
+
+    if (sessionDecided.current) return;
 
     let fresh = false;
     try {
@@ -52,12 +69,14 @@ export function SessionGuard() {
     } catch {
       // Site data blocked. Treat it as a continuing session rather than
       // disconnecting somebody on every single page view.
-      decided.current = true;
+      sessionDecided.current = true;
       return;
     }
 
-    decided.current = true;
-    if (fresh && isConnected) void disconnectAll();
+    sessionDecided.current = true;
+    // A new tab inherits no session, so a connection carried in by a cookie
+    // belongs to a previous one. Remembered, so the reconnect does not undo it.
+    if (fresh) void disconnectAll();
   }, [isConnected, disconnectAll]);
 
   return null;

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence } from "motion/react";
 import { useAccount, useConnect } from "wagmi";
-import { useDisconnectAll } from "@/lib/wallet/disconnect";
+import { useDisconnectAll, clearDisconnected } from "@/lib/wallet/disconnect";
 import {
   buildDeepLink,
   fetchMobileWallets,
@@ -141,6 +141,9 @@ export function ConnectWallet({
                 setOpen(false);
                 return;
               }
+              // Picking a wallet is consent to be connected, which retires the
+              // record of an earlier disconnect.
+              clearDisconnected();
               connect({ connector }, { onSuccess: () => setOpen(false) });
             }}
             isPending={isPending}

@@ -4,38 +4,83 @@ import { useCallback } from "react";
 import { useConfig, useDisconnect } from "wagmi";
 
 /**
- * Disconnect every wallet, not just the one on screen.
+ * Disconnecting, and making it stick.
  *
- * wagmi holds a map of simultaneous connections, and `disconnect()` with no
- * argument ends only the active one. With several browser wallets installed,
- * more than one can be authorised at once and reconnect together on load, so
- * pressing Disconnect ended the first and promoted the next. From the outside
- * that reads as the site reconnecting a wallet by itself, which is the single
- * most alarming thing a product that touches money can appear to do.
+ * Two separate faults made Disconnect not disconnect.
  *
- * It is not a leak and nothing was spent: every one of those connections was
- * authorised by the person at some point, and connecting grants no power to
- * move funds. It is still wrong. Disconnect has to mean all of them, because
- * nobody reads it as "disconnect one of the several you forgot about".
+ * The first: wagmi holds a map of simultaneous connections, and `disconnect()`
+ * with no argument ends only the active one. With several browser wallets
+ * authorised, pressing Disconnect ended the first and promoted the next.
  *
- * Shared between the account menu and the session guard so the two cannot
- * disagree about what disconnecting means.
+ * The second, and the reason it still came back after that was fixed: wagmi
+ * reconnects on mount, and `shimDisconnect` is what tells a connector not to.
+ * It is set on the `injected()` fallback in `lib/wagmi.ts` and cannot be set on
+ * the connectors that `multiInjectedProviderDiscovery` builds, because those are
+ * created by wagmi from whatever the browser announces. Every real wallet
+ * someone has installed arrives that way. So a disconnect held until the next
+ * render and then undid itself, which looks like the site reconnecting a wallet
+ * on its own.
+ *
+ * Disconnecting in a site also never revokes anything in the wallet: MetaMask
+ * still lists the site as connected and will reconnect on request. The flag
+ * below is this app's own record that the person asked to be disconnected, and
+ * it is honoured until they connect again themselves.
+ *
+ * Nothing here was ever a route to spending: every transaction is signed in the
+ * wallet. What it did was reattach an address the person had told us to drop.
  */
-export function useDisconnectAll(): () => Promise<void> {
+
+const DISCONNECTED = "ht:disconnected";
+
+/** True when the person disconnected and has not since chosen to connect. */
+export function wasDisconnected(): boolean {
+  try {
+    return localStorage.getItem(DISCONNECTED) === "1";
+  } catch {
+    // Site data blocked. Nothing persists, so nothing is suppressed.
+    return false;
+  }
+}
+
+/** Called when somebody picks a wallet, which is consent to be connected. */
+export function clearDisconnected() {
+  try {
+    localStorage.removeItem(DISCONNECTED);
+  } catch {
+    // As above.
+  }
+}
+
+function rememberDisconnected() {
+  try {
+    localStorage.setItem(DISCONNECTED, "1");
+  } catch {
+    // As above.
+  }
+}
+
+export function useDisconnectAll(): (options?: { remember?: boolean }) => Promise<void> {
   const config = useConfig();
   const { disconnectAsync } = useDisconnect();
 
-  return useCallback(async () => {
-    // Snapshotted first: disconnecting mutates the map being read.
-    const connections = [...config.state.connections.values()];
+  return useCallback(
+    async ({ remember = true } = {}) => {
+      // Set first. A wallet that hangs on disconnect must not leave the
+      // intention unrecorded, or the next mount reconnects it.
+      if (remember) rememberDisconnected();
 
-    for (const connection of connections) {
-      try {
-        await disconnectAsync({ connector: connection.connector });
-      } catch {
-        // One wallet refusing must not strand the rest connected, which would
-        // leave exactly the half-disconnected state this exists to prevent.
+      // Snapshotted, because disconnecting mutates the map being read.
+      const connections = [...config.state.connections.values()];
+
+      for (const connection of connections) {
+        try {
+          await disconnectAsync({ connector: connection.connector });
+        } catch {
+          // One wallet refusing must not strand the rest connected, which is
+          // exactly the half-disconnected state this exists to prevent.
+        }
       }
-    }
-  }, [config, disconnectAsync]);
+    },
+    [config, disconnectAsync],
+  );
 }
