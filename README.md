@@ -41,6 +41,34 @@ Alongside the simulation it reads the token's bytecode for owner powers (minting
 
 The simulator is `contracts/verify/VerifySim.sol`. The engine is `lib/verify/`, served at `GET /api/verify/:address`.
 
+```
+curl https://hood-terminus.vercel.app/api/verify/0xYourTokenAddress
+```
+
+The response is a `VerifyReport` from [`lib/verify/types.ts`](lib/verify/types.ts):
+
+```
+{
+  token:      Address
+  chainId:    number
+  checkedAt:  string
+  name:       string | null
+  symbol:     string | null
+  verdict:    "clear" | "caution" | "danger" | "unknown"
+  headline:   string                     one sentence a trader can act on
+  pool:       VerifiedPool | null        id, kind ("v2" | "v3" | "v4" | "other"),
+                                         dex, name, quoteSymbol, liquidityUsd,
+                                         createdAt, hooks
+  simulation: SimulationSummary | null   tradeUsd, roundTripPct, buyTaxPct,
+                                         sellTaxPct, sellBlocked, sellOnly
+  checks:     Check[]                    id, label,
+                                         status ("pass" | "warn" | "fail" | "unknown"),
+                                         detail
+}
+```
+
+A field is null when the answer is not known, and a check that could not run reports `unknown` rather than passing.
+
 ## Architecture
 
 - **App:** Next.js (App Router), React, TypeScript, Tailwind CSS
@@ -81,6 +109,14 @@ Version 1 was built between September 3 and September 11, 2026, before the hacka
 - **Plain language, and claims checked against the contract** (October 2026): the launchpad no longer promises fees after graduation, which it never paid, and the fee split is read from the chain rather than written down.
 - **Wallets only** (October 2026): the embedded-wallet sign-in was removed after it proved unable to create a wallet on this app, and the terms and privacy notice were rewritten to match.
 - **A session that ends when you leave** (October 2026): a connected wallet lasts for the browser session and no longer, and Disconnect ends every authorised wallet rather than promoting the next one. Neither was a route to spending, since transactions are signed in the wallet; what was exposed was the address and the portfolio behind it to whoever opened the laptop next.
+
+### Next
+
+- **Trading on v4 pools**, so pairs on launchpad hooks can be traded here rather than only checked, with Travis in the same flow.
+- **Creator fees after graduation**, through a v4 hook on the graduated pool. Version two cannot do this: once a token graduates, the fees on its liquidity cannot be collected, which is why the creator's share stops at graduation today.
+- **Travis as a column on the Discover board**, so a verdict sits beside the price rather than one page further in.
+- **Alerts checked on the server** and delivered as browser push, so a price you are waiting for reaches you when the app is closed.
+- **A developer page for `/api/verify`**, since the endpoint is public and currently documented only here.
 
 ## License
 

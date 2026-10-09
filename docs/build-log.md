@@ -169,3 +169,74 @@ disconnect path was traced by hand across the connection map rather than in a
 browser automation harness: the fault only appears with EIP-6963 connectors from
 real extensions, and a fresh automated browser has none, so it would exercise
 only the fallback connector that was never broken.
+
+## Phase 8 and the last fixes before go-live
+
+**Date:** October 9 and 10, 2026
+
+**What changed**
+
+CI had been red on every push and the reason was a real one. `LayoutProps`
+is written by Next's typegen, which runs as part of `next dev` and
+`next build`, so it exists on any machine that has run the app and never on a
+fresh checkout. CI checks out clean and typechecks before building, so it was
+the only place telling the truth. `typecheck` now runs `next typegen` first.
+
+The wallet took three attempts and the first two were wrong in ways worth
+recording. A connection survived closing the tab, because `sessionStorage` is
+restored by Chrome along with a reopened or restored tab, so the marker that was
+supposed to prove a session had ended came back with it. A heartbeat in
+`localStorage` catches that: a gap means no tab was open, whatever the marker
+says. Disconnect then still did not disconnect, because a wallet discovered over
+EIP-6963 cannot be given `shimDisconnect` and wagmi reconnects it on the next
+mount; deleting the persisted cookie is the part a connector cannot undo. And
+then connecting failed on the first attempt and worked on the second, because
+the session marker was only written inside the connected branch, so a tab that
+had never held a connection had none, and the guard ended the connection the
+person had just made. The question is asked once now, at mount, before anybody
+can click anything.
+
+The assistant's name was stored per browser, so it outlived whoever chose it: a
+stranger's nickname greeted the next person on that machine. It is keyed by
+wallet address now, and nobody connected means nobody has named him.
+
+Three things were wrong in the layout. The headline reveal drew its text into a
+canvas without the headline's letter spacing, so it measured 923px of text into
+a 768px box, wrapped, and drew the tail off-canvas where it could not be seen.
+The headline itself sized in `vw` while sitting in a column the sidebar had
+already taken 256px out of, so it overflowed and was clipped, worst at iPad
+widths. It sizes in `cqw` against that column now. And the dev overlay was
+reporting a hydration mismatch we create deliberately, by adding a class to
+`html` before React hydrates so a repeat visit does not paint the loader again.
+
+Clicking a token felt broken rather than slow: there was no loading boundary
+anywhere in the app, so Next held the previous page on screen until the server
+had finished with a rate limited market API. Every data-heavy route has one now.
+The token page also asked for a pool and then that pool's candles in sequence,
+although every link into it carries a pool address, so the candles never needed
+the lookup's answer.
+
+"Trade {symbol}" linked to `/trade` with nothing selected, and `/trade` only
+serves Uniswap v3 pairs quoted in ETH, which on this chain is a minority. It
+takes `?pool=` now, and a pair it cannot serve gets a sentence naming where it
+does trade instead of a button that goes nowhere.
+
+A settings page, holding the preferences that already existed with no home: the
+assistant's name and the display currency, which could previously only be
+changed from inside the portfolio. The nav group headings went with it, three
+words labelling three or four self-evident items.
+
+`creatorShareBps` is 8000. The owner transaction confirmed in block 84439302.
+
+**What was tested**
+
+Both CI jobs green on `hackathon-build`, with the typecheck fix proved the way
+CI sees it, by deleting `.next/types` first. 26 unit tests, including eight on
+the session decision that the first two wallet attempts would have failed, and
+four on venue naming, one of which caught a collapsed escape in the version
+regex. The wallet cycle measured in the browser against Rabby: disconnect leaves
+zero connections, reconnecting clears the flag and holds. The headline measured
+at 45.6px of type and 690px of text in a 776px column, 54px clear. The three
+trade cases checked against live pools: `USDG / WETH 0.01%` on uniswap-v3 offers
+the button, `CRH / WETH` on Pons and `AAPL / USDG` on uniswap-v4 name their venue
+instead. The creator share dry run reports the chain is already at 80/20.
