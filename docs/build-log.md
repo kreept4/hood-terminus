@@ -49,3 +49,78 @@ application and the Verify feature had never existed in one tree. They do now.
   tracked.
 - Branches `v1-import` and `build-plan` deleted after the push; the plan is
   preserved here as `13-hackathon-build-plan.md`.
+
+## Phase 1: foundations
+
+**Date:** October 8, 2026
+
+**What changed**
+
+vitest, and `solc` pinned to an exact 0.8.26 rather than a caret range, because
+`lib/verify/sim-artifact.ts` is only meaningful if a fresh build reproduces it
+byte for byte. Scripts for `test`, `typecheck` and `build:verify-sim`.
+
+CI in two jobs. The app job runs install, lint, typecheck, test and a build with
+placeholder public env values, since `NEXT_PUBLIC_*` is inlined at build time.
+The contracts job installs and tests that workspace on its own, which is now the
+only thing checking it.
+
+An amber ramp in `design/tokens.py` at hue 80, between the red at 33 and the
+green at 123, carrying the same asserted WCAG contracts as the other ramps.
+`Chip`'s `unknown` tone had been using the green pass classes while its own
+comment said amber, so a check that could not run rendered identically to one
+that passed.
+
+`lib/verify/client.ts` takes WETH from `CONTRACTS` instead of holding a second
+literal of the same address. `/api/verify` is limited to thirty a minute, keyed
+by address as well as caller, and answers cross-origin on GET and OPTIONS.
+
+**What was tested**
+
+Contrast audit passes with amber at 10.85 on the page ground, 9.89 on a cell and
+8.16 on its own fill. `build:verify-sim` reproduces the committed artifact
+exactly, once `.gitattributes` pinned Solidity sources to LF: solc hashes the
+source bytes into the bytecode metadata, so a CRLF checkout compiled to the same
+code with a different trailing hash. CORS preflight and headers verified against
+the running server.
+
+## Phase 4 and 5: Travis, the homepage, and the truth sweep
+
+**Date:** October 8 and 9, 2026
+
+**What changed**
+
+Verify was written, tested and unreachable: the panel was imported by nothing,
+there was no `/verify`, and production served a 404 for the API. It is now on
+every token page under the chart, in the trade panel as a verdict with a confirm
+before a risky buy, and at `/verify` for an address somebody was sent.
+
+It is called Travis, and the name is a preference you can change. The panel
+carries a refresh button, because reports cache for a minute and a token minted
+ten minutes ago can change what it allows between checks, and it collapses,
+because the verdict is the answer and the checks are the working.
+
+Two faults made Travis useless on the pairs that matter. Pools were located only
+through GeckoTerminal, so a rate limit became "market data is unavailable" on
+WETH against USDG; there is now a fallback to the v3 factory. And v4 pool keys
+are recovered from an `Initialize` event, which the configured RPC refuses to
+look for: its free tier caps `eth_getLogs` at ten blocks on a chain past block
+84,000,000. Log queries now go to the public endpoint, which allows ten million.
+
+The homepage opens with the chain rather than a pitch, the hero states plainly
+that Travis never uses your money, and the navigation leads with the check.
+
+The truth sweep found the launchpad promising "a fee on every trade, for as long
+as it trades". The contract stops paying the creator at graduation. Every such
+claim now says the share is of the 1% fee and is earned while the token is still
+being funded, and the percentage is read from the chain rather than written down.
+
+**What was tested**
+
+Travis on the v4 WETH/USDG pool: a $10 buy and immediate sell both went through,
+0.14% round trip, no buy tax, no sell tax. The same token reported "pool key not
+found" before the endpoint change. Candles recovered from 0 to 300 on the 5m
+timeframe after the retry and stale-cache change, and 1m returns 300 candles on
+six consecutive calls with no duplicate timestamps and 299 ascending steps.
+Launchpad figures read live from the contract: `TRADE_FEE_BPS` 100,
+`creatorShareBps` 6000, `MIN_CREATOR_SHARE_BPS` 5000, `GRADUATION_ETH` 4 ether.

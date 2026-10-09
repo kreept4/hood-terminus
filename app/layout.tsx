@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { cookieToInitialState } from "wagmi";
+import { Analytics } from "@vercel/analytics/next";
 import { Web3Providers } from "@/components/providers/Web3Providers";
 import { wagmiConfig } from "@/lib/wagmi";
 import { NetworkGuard } from "@/components/wallet/NetworkGuard";
@@ -115,6 +116,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <InstallPrompt />
           </SidebarProvider>
         </Web3Providers>
+        {/* Page views and nothing else.
+            
+            Vercel Analytics sets no cookie and builds no cross-site profile,
+            which is why the privacy notice can still say there is nothing to
+            consent to and the site can still carry no cookie banner. It has to
+            stay that way: if this is ever swapped for something that follows
+            people between sites, clause 5 of that notice stops being true. */}
+        <Analytics />
       </body>
     </html>
   );

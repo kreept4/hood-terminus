@@ -33,9 +33,12 @@ export const metadata = {
  *     or Telegram account and key material for a wallet it created; it was the
  *     most sensitive thing in this system and it is gone. A wallet address is
  *     now the only identifier the product has.
- *   - There is NO analytics, advertising or third-party tracking. Verified by
- *     grep: no gtag, no Plausible, no PostHog, no Vercel Analytics. This is why
- *     there is no cookie banner, and clause 5 says so.
+ *   - Vercel Analytics counts page views, added 9 October 2026. Cookieless, no
+ *     cross-site identity, nothing written to the device. No advertising, no
+ *     gtag, no Plausible, no PostHog. The cookie banner stays absent because
+ *     there is still no tracking to consent to, and clause 5 says exactly that.
+ *     Swapping this for anything that follows people between sites makes that
+ *     clause false.
  *   - `/api/fx` proxies Frankfurter server-side specifically so the rate
  *     provider never sees a visitor's browser.
  *
@@ -54,7 +57,7 @@ export default function PrivacyPage() {
           "There is no sign-in. You connect a wallet, and we learn its address and nothing else.",
           "Your alerts, tracked wallets and currency choice never leave your browser.",
           "We hold public chain data keyed by wallet address, which we did not get from you.",
-          "No analytics, no advertising, no third-party trackers, and so no cookie banner.",
+          "We count page views without cookies. No advertising, no trackers, and so no cookie banner.",
           "Anything already on the blockchain cannot be deleted by us or by anyone.",
         ],
         footnote:
@@ -178,7 +181,13 @@ export default function PrivacyPage() {
         </p>
       </Clause>
 
-      <Clause n={5} heading="No analytics, and so no cookie banner">
+      <Clause n={5} heading="Counting visits, and why there is still no cookie banner">
+        <p>
+          We count page views, using Vercel Analytics. It records that a page
+          was loaded, roughly where in the world from, and what kind of device.
+          It sets no cookie, stores nothing on your device, and cannot follow
+          you to another site.
+        </p>
         <p>
           There is no Google Analytics here, no advertising network, no
           third-party tracking script and no pixel. We do not build a profile of
@@ -189,9 +198,11 @@ export default function PrivacyPage() {
           <strong>
             This is why the site does not interrupt you with a cookie banner.
           </strong>{" "}
-          The consent that a banner exists to collect is consent for tracking, and
-          there is none to consent to. The browser storage in clause 4 is
-          functional: it holds settings you chose, on your own device.
+          The consent that a banner exists to collect is consent for tracking,
+          and there is none to consent to: counting a page view without a cookie
+          and without following anyone between sites is not tracking. The
+          browser storage in clause 4 is functional too, holding settings you
+          chose, on your own device.
         </p>
       </Clause>
 
