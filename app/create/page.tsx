@@ -17,8 +17,9 @@ export default function CreatePage() {
           Launch a token
         </h1>
         <p className="mt-4 text-lead text-ink-2">
-          No liquidity needed. Buyers fund it on a bonding curve, and at four
-          ETH it graduates into a Uniswap pool.
+          You put in no money of your own. Buyers fund it as they buy, and once
+          four ETH has gone in, your token opens as a normal market anyone can
+          trade.
         </p>
       </header>
 

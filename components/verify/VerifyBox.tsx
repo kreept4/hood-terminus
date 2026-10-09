@@ -151,9 +151,10 @@ export function VerifyBox() {
         </div>
       ) : (
         <p className="mt-8 max-w-2xl text-body text-ink-3">
-          Works on Uniswap v2, v3 and v4 pools, including the hooks the
-          launchpads on this chain use. A check that cannot run says so rather
-          than passing.
+          Works on every kind of pool on this chain, including the newer ones
+          most tools cannot read. If a check cannot run, it says so. It never
+          guesses, and it never calls something safe just because it could not
+          test it.
         </p>
       )}
     </div>

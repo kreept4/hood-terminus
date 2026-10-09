@@ -30,7 +30,7 @@ const STEPS = [
   },
   {
     title: "Open it",
-    body: "Buyers fund it. At four ETH it gets a real pool.",
+    body: "Buyers fund it as they buy. At four ETH it opens as a normal market.",
   },
   {
     title: "Earn from it",
@@ -43,7 +43,7 @@ const STEPS = [
      * Promising earnings that end at graduation is the one claim on this page
      * somebody could lose money believing.
      */
-    body: "You take a share of the 1% trade fee while it is on the curve.",
+    body: "You take a share of the 1% fee on every trade, until it opens as a normal market.",
   },
 ];
 
@@ -56,11 +56,12 @@ export function CreatePitch() {
             {/* ── The claim ───────────────────────────────────────── */}
             <div className="flex flex-col justify-center lg:col-span-5">
               <h2 className="text-h1 leading-none font-bold tracking-tight text-ink">
-                Launch a token and earn while it is on the curve
+                Launch a token and earn from every trade
               </h2>
               <p className="mt-4 text-lead text-ink-2">
-                Live in under a minute. No liquidity needed, and you take a
-                share of every trade on the curve.
+                Live in under a minute. You put in no money of your own, and
+                you take a share of every trade until it opens as a normal
+                market.
               </p>
 
               <dl className="mt-8 flex flex-col divide-y divide-line-soft border-t border-line-soft">
