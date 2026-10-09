@@ -70,16 +70,21 @@ type QuoteResponse = {
 export function TradePanel({
   pools,
   logos,
+  selected,
 }: {
   pools: Pool[];
   logos: Record<string, string>;
+  /** A pool named in the link, already checked as routable by the page. */
+  selected?: string;
 }) {
   const { address, isConnected } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
   const publicClient = usePublicClient();
   const [simulating, setSimulating] = useState(false);
 
-  const [poolAddress, setPoolAddress] = useState(pools[0]?.address ?? "");
+  const [poolAddress, setPoolAddress] = useState(
+    selected || pools[0]?.address || "",
+  );
   const [side, setSide] = useState<Side>("buy");
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState(1);
