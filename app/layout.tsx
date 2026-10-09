@@ -1,4 +1,7 @@
+import { headers } from "next/headers";
+import { cookieToInitialState } from "wagmi";
 import { Web3Providers } from "@/components/providers/Web3Providers";
+import { wagmiConfig } from "@/lib/wagmi";
 import { NetworkGuard } from "@/components/wallet/NetworkGuard";
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
@@ -70,7 +73,21 @@ export const viewport: Viewport = {
    */
   viewportFit: "cover",
 };
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  /**
+   * The wallet connection, recovered from the cookie before the first paint.
+   *
+   * wagmi is configured with `ssr: true` and `cookieStorage`, and that pairing
+   * only completes if the server reads the cookie and hands the state to the
+   * provider. Without this the client began every navigation with no state and
+   * reconnected after mount, so a connected wallet rendered as disconnected on
+   * the first paint of every page.
+   */
+  const initialState = cookieToInitialState(
+    wagmiConfig,
+    (await headers()).get("cookie"),
+  );
+
   return (
     <html
       lang="en"
@@ -83,7 +100,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full">
         <PageLoader />
-        <Web3Providers>
+        <Web3Providers initialState={initialState}>
           <SidebarProvider>
             <Sidebar />
             {/* The rail is fixed, so the content column is inset rather than

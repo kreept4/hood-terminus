@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, type State } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "@/lib/wagmi";
 
@@ -27,13 +27,29 @@ import { wagmiConfig } from "@/lib/wagmi";
  * get one, and some of them will not come back. That is a worse funnel and a
  * working product, which beats a better funnel and a dead end.
  */
-export function Web3Providers({ children }: { children: ReactNode }) {
+export function Web3Providers({
+  children,
+  initialState,
+}: {
+  children: ReactNode;
+  /**
+   * The connection, read from the cookie on the server.
+   *
+   * `wagmiConfig` sets `ssr: true` with `cookieStorage`, which only works if
+   * the server hands the state it read to the provider. Without it every
+   * navigation started from nothing and reconnected asynchronously, so a
+   * connected wallet rendered as disconnected for the first paint of every
+   * page: the nav offered "Connect a wallet" to somebody already connected,
+   * and the portfolio asked them to connect one.
+   */
+  initialState: State | undefined;
+}) {
   // Created in state rather than at module scope so each SSR request gets its
   // own. A shared client leaks cached data between users on the server.
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig} initialState={initialState}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
