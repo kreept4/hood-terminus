@@ -59,8 +59,7 @@ export function Hero() {
               given the same surface treatment as every other card in the
               product rather than a shape invented for this page. */}
           <div className="panel mt-7 max-w-xl">
-            <div className="flex items-center gap-2 border-b border-line-soft px-4 py-3">
-              <span className="h-1.5 w-1.5 rounded-full bg-green" aria-hidden="true" />
+            <div className="border-b border-line-soft px-4 py-3">
               <p className="text-body font-medium text-ink">
                 {assistant} does not use your money
               </p>
