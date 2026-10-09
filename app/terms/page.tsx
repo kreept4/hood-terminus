@@ -34,7 +34,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of use"
-      updated="8 September 2026"
+      updated="9 October 2026"
       intro="What this software does, what the contracts do, and where our responsibility begins and ends. Plain terms, because terms nobody reads protect nobody."
       summary={{
         heading: "Headnote",
@@ -42,7 +42,7 @@ export default function TermsPage() {
           "We are software for reading a public blockchain and sending your own transactions to it.",
           "We never hold your funds and we cannot move, freeze, refund or reverse anything.",
           "Anyone can launch a token here. A token launched here is not vetted, endorsed or checked by us.",
-          "Trades cost 1% of the amount traded. Half goes to the token's creator and half to us.",
+          "Trades cost 1% while a token is still being funded. Most of that goes to its creator, the rest to us.",
           "Most tokens go to zero. Treat every one of them as money you can afford to lose entirely.",
           "We limit our liability as far as the law allows, and no further.",
         ],
@@ -137,7 +137,49 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={4} heading="Market data comes from other people">
+      <Clause n={4} heading="What Travis is, and what he is not">
+        <p>
+          Travis is the name of the check this site runs on a token. You can
+          rename him in the box on the check page, and the name is stored only
+          in your own browser. He is software, not a person and not an adviser.
+        </p>
+        <p>
+          <strong>Travis never uses your money.</strong> He copies the current
+          state of the blockchain, spends imaginary money inside that copy to buy
+          the token and sell it straight back, and reports what happened. Nothing
+          is signed, nothing is sent to the chain, no fee is paid and your wallet
+          is not involved at any point. That is why he can test a token you do
+          not own and have never held.
+        </p>
+        <p>
+          What guides him is evidence, in this order. First, whether the sale
+          actually went through in that copy, because a token you cannot sell is
+          the one failure that costs you everything. Then what the token&rsquo;s
+          code permits whoever controls it to do. Then what the trade cost and
+          what the market data says about who holds the supply.
+        </p>
+        <p>
+          <strong>
+            A check that cannot run is reported as unknown and never as a pass.
+          </strong>{" "}
+          This matters more than any other sentence here. If the chain is
+          unreachable, or the token trades somewhere he cannot reach, he says so.
+          He does not guess, and he does not call something safe because he
+          failed to test it.
+        </p>
+        <p>
+          He describes what is true at the moment he looks. A token that passes
+          every check can be changed by its owner a minute later, if its code
+          allows that, and Travis will have told you that the code allows it.{" "}
+          <strong>
+            He is not a guarantee, not a promise that you will make money, and
+            not advice to buy anything.
+          </strong>{" "}
+          The decision is yours and the loss is yours.
+        </p>
+      </Clause>
+
+      <Clause n={5} heading="Market data comes from other people">
         <p>
           Prices, volumes, liquidity figures, charts and wallet rankings are
           assembled from public sources including GeckoTerminal and the chain
@@ -151,18 +193,20 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={5} heading="What it costs">
+      <Clause n={6} heading="What it costs">
         <p>
           Creating a token costs a launch fee, which is set on the contract and
           shown on the create form before you commit. The fee can change, so the
           figure shown at the moment you launch is the one that applies.
         </p>
         <p>
-          Every buy and sell on the bonding curve costs <strong>1% of the
-          amount traded</strong>. That 1% is split evenly: half is credited to
-          the token&rsquo;s creator, half to us. Both are credited to a balance
-          on the contract and withdrawn on demand rather than paid out
-          automatically.
+          While a token is still being funded by buyers, every buy and sell
+          costs <strong>1% of the amount traded</strong>. Most of that 1% goes
+          to the person who created the token and the rest to us. The exact
+          split is held on the contract, is shown on the create page as it
+          stands at that moment, and can be changed by us, though never below
+          half to the creator. Both shares build up as a balance on the contract
+          and are withdrawn on demand rather than paid out automatically.
         </p>
         <p>
           Network gas is separate, goes to the network rather than to us, and we
@@ -170,7 +214,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={6} heading="How the curve and graduation work">
+      <Clause n={7} heading="How the curve and graduation work">
         <p>
           A new token opens on a bonding curve rather than in a pool. The price
           rises as people buy and falls as they sell, and the contract is the
@@ -195,7 +239,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={7} heading="Using the site properly">
+      <Clause n={8} heading="Using the site properly">
         <p>You agree not to use {BRAND.name} to:</p>
         <ul>
           <li>
@@ -227,7 +271,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={8} heading="The site can change or stop">
+      <Clause n={9} heading="The site can change or stop">
         <p>
           We may change, suspend or discontinue any part of the interface at any
           time, and we may do so without notice. The site is provided as it is
@@ -243,7 +287,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={9} heading="Risk, stated plainly">
+      <Clause n={10} heading="Risk, stated plainly">
         <p>
           Digital assets are volatile and speculative. The tokens launched here
           are memecoins with no underlying business, no revenue and no
@@ -264,7 +308,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={10} heading="Limits on our liability">
+      <Clause n={11} heading="Limits on our liability">
         <p>
           Nothing in these terms limits or excludes our liability for death or
           personal injury caused by our negligence, for fraud or fraudulent
@@ -303,7 +347,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={11} heading="Changes to these terms">
+      <Clause n={12} heading="Changes to these terms">
         <p>
           We may update these terms. The date at the top says when they last
           changed, and continuing to use the site after a change means you accept
@@ -312,7 +356,7 @@ export default function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={12} heading="General">
+      <Clause n={13} heading="General">
         <p>
           Nothing in these terms takes away rights you have under the law where
           you live that cannot be contracted out of, including any consumer
