@@ -1,6 +1,6 @@
 import "server-only";
 import { parseAbi, parseAbiItem, type Address, type Hex } from "viem";
-import { verifyClient, V4_POOL_MANAGER } from "./client";
+import { verifyClient, verifyLogClient, V4_POOL_MANAGER } from "./client";
 import { CONTRACTS } from "@/lib/chain/contracts";
 import type { PoolKind } from "./types";
 
@@ -46,7 +46,9 @@ export async function v4PoolKey(id: Hex, createdAt: string | null): Promise<Pool
   const cached = keyCache.get(id);
   if (cached) return cached;
 
-  const client = verifyClient();
+  // Logs only. See `verifyLogClient`: the configured RPC refuses ranged log
+  // queries, which is what made every v4 pool unverifiable.
+  const client = verifyLogClient();
   const head = await client.getBlock();
   const windows: [bigint, bigint][] = [];
 

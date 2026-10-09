@@ -400,14 +400,25 @@ export async function getPoolWithLogo(
 
 /** Which pool is the primary market for a token. */
 export async function getPoolsForToken(address: string): Promise<Pool[]> {
+  /**
+   * `include=base_token`, like every other pool request here.
+   *
+   * It was the only one without it. `imagesFrom` reads the artwork out of the
+   * `included` block, and without the parameter that block comes back empty, so
+   * every row this fed rendered a monogram instead of the token's own mark.
+   * That is the "other markets" table on a token page: the same token, with its
+   * logo in the header and a grey initial two inches below it.
+   *
+   * It costs nothing. The tokens are already being joined to build the response.
+   */
   const json = await get<PoolList>(
-    `/networks/${NETWORK}/tokens/${address}/pools?page=1`,
+    `/networks/${NETWORK}/tokens/${address}/pools?page=1&include=base_token`,
     30,
   );
   return (json?.data ?? []).map((raw) => normalise(raw, imagesFrom(json?.included)));
 }
 
-export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "12h" | "1d";
 
 /** GeckoTerminal splits timeframe and aggregate; the UI thinks in one label. */
 const TF: Record<Timeframe, { path: string; aggregate: number }> = {
@@ -416,6 +427,8 @@ const TF: Record<Timeframe, { path: string; aggregate: number }> = {
   "15m": { path: "minute", aggregate: 15 },
   "1h": { path: "hour", aggregate: 1 },
   "4h": { path: "hour", aggregate: 4 },
+  // The last aggregate this upstream offers on the hour endpoint.
+  "12h": { path: "hour", aggregate: 12 },
   "1d": { path: "day", aggregate: 1 },
 };
 

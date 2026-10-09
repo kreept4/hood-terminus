@@ -49,3 +49,37 @@ export const WETH = CONTRACTS.weth;
 
 /** v4 marks native ETH as the zero address. */
 export const NATIVE = "0x0000000000000000000000000000000000000000" as const;
+
+/**
+ * A second client, for log queries only, always on the public endpoint.
+ *
+ * Alchemy's free tier refuses `eth_getLogs` over more than ten blocks:
+ *
+ *   Under the Free tier plan, you can make eth_getLogs requests with up to a
+ *   10 block range.
+ *
+ * The chain is past block 84,000,000, so finding a pool's Initialize event that
+ * way would take millions of requests. The error came back as a rejected
+ * promise, was caught, and became "pool key not found", which made every
+ * Uniswap v4 pool unverifiable. On this chain that is most of the interesting
+ * ones, including WETH against USDG.
+ *
+ * The public endpoint allows ten million blocks per query, which is exactly
+ * what the window in `pool.ts` was written for. So reads keep Alchemy, which is
+ * faster and more reliable for them, and logs go somewhere that will answer
+ * them. The USDG pool's event is in blocks 40,000,000 to 49,999,999, found on
+ * the fifth window and cached for the life of the process.
+ */
+let logs: PublicClient | null = null;
+
+export function verifyLogClient(): PublicClient {
+  logs ??= createPublicClient({
+    chain: robinhoodChain,
+    transport: http("https://rpc.mainnet.chain.robinhood.com", {
+      retryCount: 2,
+      retryDelay: 800,
+      timeout: 20_000,
+    }),
+  }) as PublicClient;
+  return logs;
+}
