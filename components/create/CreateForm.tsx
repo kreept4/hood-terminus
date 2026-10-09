@@ -735,12 +735,12 @@ export function CreateForm() {
               <div className="flex flex-col gap-2">
                 <ConnectWallet
                   className="w-full justify-center py-3"
-                  signInOnly
+
                   label="Sign in"
                 />
                 <ConnectWallet
                   className="w-full justify-center py-3"
-                  walletOnly
+
                   label="Link a wallet"
                 />
               </div>

@@ -16,7 +16,6 @@ import { truncateAddress } from "@/lib/format";
 import { robinhoodChain } from "@/lib/chain";
 import { DepositSheet } from "@/components/wallet/FundingSheets";
 import { Sheet } from "@/components/wallet/Sheet";
-import { useWalletAuth } from "@/lib/wallet/auth";
 
 /**
  * Wallet connection.
@@ -35,12 +34,11 @@ import { useWalletAuth } from "@/lib/wallet/auth";
  * Scanning a QR code is WalletConnect, and WalletConnect needs a project ID.
  * Without one the option is absent rather than present and broken.
  *
- * Above all of it sits sign-in, for the people this list has no answer for.
- * Someone who arrives from a posted link with nothing installed cannot be
- * helped by a roster of wallets they do not have, and telling them to go and
- * get one is where they leave. It is first in the sheet because it is the only
- * option that works for them, and it is absent entirely when Privy is not
- * configured rather than present and dead.
+ * Sign-in used to sit above all of it, for the people this list has no answer
+ * for: someone arriving from a posted link with nothing installed cannot be
+ * helped by a roster of wallets they do not have. It was removed because it
+ * never produced a wallet on this app, and an option that authenticates you
+ * and then strands you is worse than no option. See `Web3Providers`.
  */
 
 const CONNECTOR_META: Record<string, { description: string }> = {
@@ -71,35 +69,11 @@ const KNOWN = [
 export function ConnectWallet({
   className,
   compact = false,
-  signInOnly = false,
-  walletOnly = false,
-  label = "Sign in",
+  label = "Connect a wallet",
 }: {
   className?: string;
   /** Icon only. For tight rows where a labelled button does not fit. */
   compact?: boolean;
-  /**
-   * Offers sign-in and nothing else.
-   *
-   * The nav uses this. Linking an existing wallet is not a way into the
-   * product, it is something you do once you are already in and about to spend
-   * something, so it belongs beside the launch and trade forms rather than in
-   * the chrome of every page. Offering it in the nav made the first thing a
-   * visitor saw a list of software they probably do not have.
-   *
-   * Ignored when Privy is not configured, since the wallet list is then the
-   * only way in and hiding it would leave a button that opens an empty sheet.
-   */
-  signInOnly?: boolean;
-  /**
-   * The mirror of `signInOnly`: wallets and no sign-in.
-   *
-   * Used where both are offered as separate, visible choices rather than as one
-   * sheet a reader has to open before they learn what is in it. Fusing them
-   * meant a single button whose meaning depended on what you found inside, and
-   * the nav does not work that way, so the create form should not either.
-   */
-  walletOnly?: boolean;
   /** Trigger text. The default suits the nav; the create form names each path. */
   label?: string;
 }) {
@@ -107,7 +81,6 @@ export function ConnectWallet({
   const { address, isConnected } = useAccount();
   const { connectors, connect, isPending, error, variables } = useConnect();
   const { disconnect } = useDisconnect();
-  const auth = useWalletAuth();
 
   if (isConnected && address) {
     return (
@@ -115,89 +88,36 @@ export function ConnectWallet({
         address={address}
         onDisconnect={() => {
           disconnect();
-          /**
-           * Both, and in this order.
-           *
-           * Disconnecting wagmi alone leaves the Privy session standing, and
-           * the bridge would hand the wallet straight back on the next render:
-           * the button would say Disconnect, be pressed, and change nothing.
-           */
-          if (auth?.authenticated) void auth.logout();
         }}
         className={className}
       />
     );
   }
 
-  /**
-   * Signed in, with no wallet attached.
-   *
-   * Three states, not two. `isConnected` above answers "is there a wallet",
-   * which is not the same question as "is this person signed in": Privy can
-   * hold a completed session while the account has no embedded wallet, which is
-   * what happens while wallet creation is off for the app.
-   *
-   * Treating that as signed-out was the bug. The trigger read "Connect wallet"
-   * to somebody who had just signed in, so the only available reading was that
-   * the sign-in had failed. It had not. Showing the identity we actually hold,
-   * and explaining the missing half inside, is the honest version.
-   *
-   * Only where this button is the account, which is the nav. `signInOnly` and
-   * `walletOnly` are specific calls to action sitting side by side, and
-   * replacing both their labels with the same handle produced two identical
-   * buttons under a prompt telling somebody to sign in who already had. A
-   * button that says who you are is an account chip; one that says what it does
-   * is a control, and these are controls.
-   */
-  const signedInWithoutWallet = Boolean(
-    auth?.ready && auth?.authenticated && !signInOnly && !walletOnly,
-  );
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={signedInWithoutWallet ? "Signed in, no wallet yet" : label}
-        title={
-          signedInWithoutWallet
-            ? "Signed in. No wallet attached yet."
-            : compact
-              ? label
-              : undefined
-        }
+        aria-label={label}
+        title={compact ? label : undefined}
         className={clsx(
           "flex items-center justify-center rounded-md border text-ink",
           "transition-colors duration-100 hover:border-green hover:text-green",
-          signedInWithoutWallet ? "border-amber-line" : "border-line",
+          "border-line",
           compact ? "tap-44 h-9 w-9" : "gap-2 px-3 py-1.5 text-body",
           className,
         )}
       >
-        {signedInWithoutWallet && auth?.avatarUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={auth.avatarUrl}
-            alt=""
-            width={20}
-            height={20}
-            className="h-5 w-5 shrink-0 rounded-full"
-          />
-        ) : (
-          <IconWalletSmall />
-        )}
-        {!compact &&
-          (signedInWithoutWallet
-            ? (auth?.handle ?? "Signed in")
-            : label)}
+        <IconWalletSmall />
+        {!compact && label}
       </button>
 
       <AnimatePresence>
         {open && (
           <WalletSheet
             key="connect"
-            signInOnly={signInOnly}
-            walletOnly={walletOnly}
             connectors={connectors}
             onConnect={(connector) => {
               /**
@@ -235,170 +155,10 @@ export function ConnectWallet({
   );
 }
 
-/**
- * The way in for somebody with no wallet at all.
- *
- * Deliberately the loudest thing in the sheet. Every other option here assumes
- * software the visitor already installed, and the ones who did not are exactly
- * the ones a shared link brings. One tap, an email or an X account, and they
- * come back holding an address that the rest of this app cannot tell apart
- * from MetaMask.
- *
- * It closes the sheet on tap rather than waiting for the result: Privy opens
- * its own modal on top, and leaving ours underneath would stack two dialogs
- * and two close buttons on a phone screen.
- */
-/** The square mark at the head of each row. */
-function Tile({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-surface-2 text-ink">
-      {children}
-    </span>
-  );
-}
-
-const ROW =
-  "flex w-full items-center gap-3 rounded-lg border border-line bg-surface-2/40 px-3 py-2.5 " +
-  "text-left text-body font-medium text-ink transition-colors duration-100 " +
-  "hover:border-green-line hover:bg-surface-2";
-
-function SignIn({
-  auth,
-  onDone,
-  showWalletDivider,
-}: {
-  auth: NonNullable<ReturnType<typeof useWalletAuth>>;
-  onDone: () => void;
-  showWalletDivider: boolean;
-}) {
-
-  /**
-   * Never gated on the SDK being ready.
-   *
-   * `ready` flips once, after Privy answers. When that answer never arrives it
-   * stays false for the life of the page, and gating on it leaves the primary
-   * way into the product dead with nothing that will ever revive it.
-   */
-  /**
-   * Opens Privy's own modal, with no method pinned and nothing prefilled.
-   *
-   * This used to pass `loginMethods` and `prefill` so the sheet could own the
-   * whole look of signing in. That is the whitelabel path, and Privy documents
-   * that automatic wallet creation does not run on it: `createOnLogin` only
-   * applies to a login through their modal. The result was a session with no
-   * wallet attached, which is not a state this product has any use for, since
-   * every action past sign-in needs an address.
-   *
-   * So the methods are chosen in Privy's modal now. The visible cost is one
-   * extra surface in the flow. What it buys is a wallet, which is the entire
-   * reason anybody signs in here. The dashboard already decides which methods
-   * appear, so nothing about that changes.
-   */
-  function begin() {
-    try {
-      // Email and X only. Still Privy's modal, so wallet creation applies; the
-      // list only narrows which methods it offers. Telegram is out because it
-      // never completed a sign-in, see `lib/wallet/auth.ts`.
-      auth.login({ methods: ["email", "twitter"] });
-    } catch (e) {
-      /**
-       * Logged, not swallowed. Silence made "sign in does not work" an
-       * unreportable bug: no modal, no error, nothing to work back from.
-       */
-      console.error("[sign-in] Privy refused to open the login modal.", e);
-      return;
-    }
-    onDone();
-  }
-
-  /**
-   * Signed in, but with no wallet to show for it.
-   *
-   * This sheet is reached from wagmi's `isConnected`, which needs a wallet, not
-   * an identity. Privy can hold a completed session while the account has no
-   * embedded wallet attached, which happens when wallet creation is off in the
-   * Privy dashboard, and `PrivyBridge` deliberately no longer forces one.
-   *
-   * The methods below are then dead in a way nobody could diagnose from the
-   * outside: every button calls `login`, Privy answers "already logged in, use
-   * a link helper", and the sheet does nothing at all. That is exactly what it
-   * looked like from the chair. Offering a sign-in to somebody already signed
-   * in is the dishonest state here, so say what happened and give the one
-   * control that resolves it.
-   */
-  if (auth.authenticated) {
-    return (
-      <div className="mb-5">
-        <div className="rounded-md border border-line bg-surface-2 px-4 py-4">
-          <p className="text-body text-ink">You are already signed in.</p>
-          <p className="mt-2 text-micro leading-relaxed text-ink-3">
-            This account has no wallet attached, so there is nothing to trade
-            with yet. Signing out and back in will attach one once wallet
-            creation is enabled for the app.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              void auth.logout();
-              onDone();
-            }}
-            className="mt-3 rounded-md border border-line px-3 py-2 text-body text-ink transition-colors duration-100 hover:border-green hover:text-green"
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-5">
-      {/* One way in, which opens Privy's modal.
-
-          Three rows used to live here, one per method, each pinning its method
-          through `loginMethods`. They looked better and they did not work: that
-          is the whitelabel path, where Privy skips wallet creation, so people
-          arrived signed in with no address and nothing they could do. The marks
-          stay as a signal of what is behind the button, because which of these
-          a person has is still not something we get to have an opinion about. */}
-      <button type="button" onClick={begin} className={ROW}>
-        <span className="flex items-center gap-1.5">
-          <Tile>
-            <IconMail />
-          </Tile>
-          <Tile>
-            <IconX />
-          </Tile>
-        </span>
-        <span className="min-w-0 flex-1 text-left">
-          Sign in with email or social
-        </span>
-      </button>
-
-      {/* The only line left under the methods, and only because it was asked
-          for. It answers "who is holding my keys" for the reader most likely
-          to leave without an answer. */}
-      <p className="mt-4 text-center text-micro text-ink-3/70">
-        Powered by Privy
-      </p>
-
-      {showWalletDivider && (
-        <div className="mt-5 mb-3 flex items-center gap-3">
-          <span className="h-px flex-1 bg-line-soft" />
-          <span className="text-micro text-ink-3">or link a wallet you have</span>
-          <span className="h-px flex-1 bg-line-soft" />
-        </div>
-      )}
-    </div>
-  );
-}
-
 type UseConnect = ReturnType<typeof useConnect>;
 type Connector = UseConnect["connectors"][number];
 
 function WalletSheet({
-  signInOnly,
-  walletOnly,
   connectors,
   onConnect,
   isPending,
@@ -406,8 +166,6 @@ function WalletSheet({
   error,
   onClose,
 }: {
-  signInOnly: boolean;
-  walletOnly: boolean;
   connectors: UseConnect["connectors"];
   /* A callback rather than wagmi's `connect` itself. Passing the mutation down
      drags its config generic with it, and the chain id narrows to the literal
@@ -418,7 +176,6 @@ function WalletSheet({
   error: Error | null;
   onClose: () => void;
 }) {
-  const auth = useWalletAuth();
   const [query, setQuery] = useState("");
   // Wallets whose advertised icon failed to load. EIP-6963 icons are data URIs
   // supplied by the extension, and a malformed one would otherwise leave a
@@ -553,30 +310,15 @@ function WalletSheet({
 
   const nothing = available.length === 0 && notInstalled.length === 0;
 
-  /**
-   * Whether to draw the wallet half of this sheet at all.
-   *
-   * `signInOnly` hides it for the nav, but only when there is something to hide
-   * it in favour of. With Privy unconfigured `auth` is null, and suppressing
-   * the wallets as well would leave a Sign in button that opens an empty sheet.
-   */
-  const walletHalf = walletOnly || !signInOnly || !auth;
+  // Always. Sign-in is gone, so the wallet list is the whole sheet.
+  const walletHalf = true;
 
   return (
     <Sheet
-      label="Sign in"
-      title={walletOnly ? "Link a wallet" : auth ? "Sign in" : "Link a wallet"}
+      label="Connect a wallet"
+      title="Connect a wallet"
       onClose={onClose}
     >
-          {auth && !walletOnly && query.trim() === "" && (
-            <SignIn
-              auth={auth}
-              onDone={onClose}
-              // The rule that introduces the wallet list is only worth drawing
-              // when there is a wallet list under it.
-              showWalletDivider={!signInOnly}
-            />
-          )}
 
           {walletHalf && (
           <>
@@ -850,26 +592,10 @@ function AccountMenu({
   onDisconnect: () => void;
   className?: string;
 }) {
-  const auth = useWalletAuth();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [depositing, setDepositing] = useState(false);
-  const [brokenAvatar, setBrokenAvatar] = useState(false);
 
-  /**
-   * Whether the signed-in identity actually belongs to the wallet on screen.
-   *
-   * These come apart. Connect MetaMask, then sign in with X, and Privy
-   * authenticates the X account while wagmi is still connected to MetaMask. The
-   * nav then put an X handle and avatar above somebody else's address, which
-   * reads as "this X account is that wallet" and is not true of either.
-   *
-   * The identity is only shown when the connected address is the wallet Privy
-   * holds for that account. Otherwise the address speaks for itself.
-   */
-  const ownIdentity =
-    Boolean(auth?.embeddedAddress) &&
-    auth?.embeddedAddress?.toLowerCase() === address.toLowerCase();
   const box = useRef<HTMLDivElement | null>(null);
   const menu = useRef<HTMLDivElement | null>(null);
 
@@ -966,23 +692,10 @@ function AccountMenu({
           "hover:border-green hover:text-green",
         )}
       >
-        {/* A face and a handle when the person signed in as somebody, the
-            address when they arrived as a wallet. An address is a fine
-            identifier and a poor name, and the nav is a place for a name. */}
-        {ownIdentity && auth?.avatarUrl && !brokenAvatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={auth.avatarUrl}
-            alt=""
-            width={20}
-            height={20}
-            className="h-5 w-5 shrink-0 rounded-full object-cover"
-            onError={() => setBrokenAvatar(true)}
-          />
-        ) : null}
-        <span className={clsx("truncate", !(ownIdentity && auth?.handle) && "tnum")}>
-          {(ownIdentity && auth?.handle) || truncateAddress(address)}
-        </span>
+        {/* The address, which is the only identity there is now. A face and a
+            handle used to show here when somebody signed in as a person rather
+            than as a wallet; that came from Privy and went with it. */}
+        <span className="tnum truncate">{truncateAddress(address)}</span>
         <Chevron open={open} />
       </button>
 
@@ -1104,40 +817,6 @@ function Chevron({ open }: { open: boolean }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function IconMail() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <rect x="2.75" y="5" width="18.5" height="14" rx="2.5" />
-      <path d="M3.5 7.5l7.35 5.06a2 2 0 0 0 2.3 0L20.5 7.5" />
-    </svg>
-  );
-}
-
-function IconX() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
   );
 }

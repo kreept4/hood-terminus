@@ -91,10 +91,11 @@ export default function TermsPage() {
 
       <Clause n={2} heading="Your wallet is yours to keep safe">
         <p>
-          You can arrive with a wallet you already have, or sign in with an email
-          address, an X account or Telegram and have a wallet created for you.
-          That second route is provided by Privy, and the clause on it in our{" "}
-          <Link href="/privacy">privacy notice</Link> explains what they hold.
+          You arrive with a wallet you already have. There used to be a second
+          route, signing in with an email address, an X account or Telegram to
+          have a wallet created for you, and it was removed on 8 October 2026.
+          The clause in our <Link href="/privacy">privacy notice</Link> explains
+          what that means if you used it.
         </p>
         <p>
           Either way, the wallet is yours and its security is your

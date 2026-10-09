@@ -34,12 +34,10 @@ jobs:
 
       # `NEXT_PUBLIC_*` values are inlined at build time, so the build needs
       # something in the right shape for each or it fails on a page that reads
-      # one. These are placeholders and reach no service: the Privy id is
-      # checked against `^[a-z0-9]{20,32}$` before use, and the Supabase URL only
-      # has to parse. Real values live in Vercel.
+      # one. These are placeholders and reach no service: the
+      # Supabase URL only has to parse. Real values live in Vercel.
       - name: Build
         env:
-          NEXT_PUBLIC_PRIVY_APP_ID: ciciciciciciciciciciccc
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: placeholder

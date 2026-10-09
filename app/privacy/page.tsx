@@ -28,10 +28,10 @@ export const metadata = {
  *     description and image a creator chooses to attach.
  *   - Supabase storage bucket `token-images`, added 8 September, holds uploaded
  *     token artwork. Public by design, because a token's logo is public.
- *   - Privy holds the identity: an email address, an X account or a Telegram
- *     account, plus key material for a wallet it creates. That is the only
- *     place a person's own identifier exists, and it is the most sensitive
- *     thing in this system.
+ *   - No identity provider, as of 8 October 2026. Privy held an email, an X
+ *     or Telegram account and key material for a wallet it created; it was the
+ *     most sensitive thing in this system and it is gone. A wallet address is
+ *     now the only identifier the product has.
  *   - There is NO analytics, advertising or third-party tracking. Verified by
  *     grep: no gtag, no Plausible, no PostHog, no Vercel Analytics. This is why
  *     there is no cookie banner, and clause 4 says so.
@@ -44,13 +44,13 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy"
-      updated="8 September 2026"
+      updated="8 October 2026"
       intro="What we collect, what never leaves your browser, and what is on a public chain and therefore beyond anyone's power to delete. Written to be read, not to be survived."
       summary={{
         heading: "Headnote",
         points: [
           "There is no account here. We do not ask for your name, and we do not know it.",
-          "Signing in with email, X or Telegram gives that identifier to Privy, not to us.",
+          "There is no sign-in. You connect a wallet, and we learn its address and nothing else.",
           "Your alerts, tracked wallets and currency choice never leave your browser.",
           "We hold public chain data keyed by wallet address, which we did not get from you.",
           "No analytics, no advertising, no third-party trackers, and so no cookie banner.",
@@ -98,28 +98,25 @@ export default function PrivacyPage() {
         </p>
       </Clause>
 
-      <Clause n={2} heading="Signing in, and what Privy holds">
+      <Clause n={2} heading="Connecting a wallet">
         <p>
-          You can use the site with a wallet you already have, in which case
-          nobody learns anything about you beyond the address. You can instead
-          sign in with an email address, an X account or Telegram, and have a
-          wallet created for you.
+          There is one way in: a wallet you already have. Connecting it tells us
+          your address and nothing else. We never see a name, an email or a
+          social account, because there is no longer anywhere to enter one.
         </p>
         <p>
-          That second route is operated by <strong>Privy</strong>. Privy holds the
-          identifier you signed in with, and holds key material for the wallet it
-          creates on your behalf. If you signed in with X we display your
-          profile picture and handle, which we read from Privy each time rather
-          than storing.
+          Until 8 October 2026 there was a second route. You could sign in with
+          an email address, an X account or Telegram, and have a wallet created
+          for you, which was operated by Privy. Privy held the identifier you
+          signed in with and key material for that wallet, and was the one party
+          able to associate your email or social account with your address.
         </p>
         <p>
-          <strong>This is the most sensitive part of the system and it is worth
-          being exact about it.</strong> Privy is the party that can associate
-          your email address or social account with your wallet address. We can
-          see that association while you are signed in. It is what makes signing
-          in convenient, and it is also what makes it different in kind from
-          arriving with your own wallet. If you would rather no such link exists,
-          use your own wallet.
+          That route has been removed and the integration is gone from this site.
+          If you used it, Privy still holds whatever it held, and that is between
+          you and Privy: their privacy policy governs it and their support can
+          act on it. We never received those identifiers, so there is nothing
+          here for us to delete.
         </p>
       </Clause>
 
@@ -174,10 +171,6 @@ export default function PrivacyPage() {
           <li>
             <strong>Supabase</strong> stores the chain-derived tables and the
             uploaded token images
-          </li>
-          <li>
-            <strong>Privy</strong> holds sign-in identifiers and embedded wallet
-            key material, for people who use that route
           </li>
           <li>
             <strong>Alchemy</strong> and the public Robinhood Chain endpoint serve
@@ -239,9 +232,8 @@ export default function PrivacyPage() {
           our own tables. Ask and we will do it.
         </p>
         <p>
-          Two honest limits. We cannot delete anything from the blockchain, as
-          clause 6 explains. And to delete your sign-in identity you will need to
-          go to Privy, because they hold it rather than us.
+          One honest limit. We cannot delete anything from the blockchain, as
+          clause 6 explains.
         </p>
         <p>
           Reach us through the links in the footer. If you are not satisfied

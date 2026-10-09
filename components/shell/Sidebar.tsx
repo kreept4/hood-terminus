@@ -222,7 +222,7 @@ export function Sidebar() {
             they sat alone at the bottom of a tall empty column. */}
         {!collapsed && (
           <div className="mt-6 border-t border-line-soft px-3 pt-4">
-            <ConnectWallet className="w-full justify-center" signInOnly />
+            <ConnectWallet className="w-full justify-center" />
           </div>
         )}
 
@@ -453,7 +453,7 @@ function MobileHeader() {
           in from the chrome and no way to reach Disconnect at all. It is the
           same control the rail uses, in the same sign-in-only mode. */}
       <div className="ml-auto">
-        <ConnectWallet signInOnly />
+        <ConnectWallet />
       </div>
     </header>
   );
