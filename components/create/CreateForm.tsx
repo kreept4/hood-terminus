@@ -551,8 +551,9 @@ export function CreateForm() {
               className={clsx(INPUT, "tnum")}
             />
             <span className="text-micro text-ink-3">
-              Where your {creatorSharePercent}% of every trade fee accrues. Set
-              once at launch and never changeable afterwards.
+              Where your {creatorSharePercent}% of the 1% trade fee accrues while
+              the token is on the curve. Set once at launch and never changeable
+              afterwards.
             </span>
           </Field>
 
@@ -829,8 +830,9 @@ export function CreateForm() {
         <Card className="p-5">
           <h2 className="text-lead font-semibold text-ink">Trading fees</h2>
           <p className="mt-2 text-body text-ink-2">
-            Fees from every trade on your token come back to you, claimable here
-            whenever you want them.
+            Your share of the 1% trade fee, earned while the token is on the
+            curve, claimable here whenever you want it. Trades stop paying this
+            once the token graduates into a Uniswap pool.
           </p>
           <dl className="mt-4 flex flex-col gap-3">
             <Row label="Earned so far" value="0 ETH" mono />

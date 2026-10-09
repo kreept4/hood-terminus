@@ -20,7 +20,7 @@ Hood Terminus puts discovery, trading, wallet intelligence and launching on one 
 | Trade | Swaps through Uniswap's UniversalRouter with slippage control, minimum received and price impact shown before you sign. Buying with ETH takes one transaction and one signature, with no token approval. |
 | Portfolio | Holdings and value for a connected wallet. |
 | Alerts | Price alerts on any token, checked while the app is open. |
-| Create | Launch a token with no upfront liquidity. Buyers fund it on a bonding curve, and once it raises 4 ETH it graduates into a Uniswap pool. The creator earns a share of every trade. |
+| Create | Launch a token with no upfront liquidity. Buyers fund it on a bonding curve, and once it raises 4 ETH it graduates into a Uniswap pool. The creator takes a share of the 1% trade fee while the token is on the curve. |
 | Verify | Before you buy, a real buy and sell is simulated through the token's main pool. You see whether selling works, what a round trip costs, who controls the contract, and what the pool's hook can do. |
 
 ## Robinhood Chain integration

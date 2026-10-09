@@ -6,7 +6,7 @@ import { OwnerPanel } from "@/components/create/OwnerPanel";
 export const metadata = {
   title: "Create a token",
   description:
-    "Launch a token on Robinhood Chain with nothing up front and keep the fees it trades on.",
+    "Launch a token on Robinhood Chain with no liquidity needed, and take a share of the 1% trade fee while it is on the bonding curve.",
 };
 
 export default function CreatePage() {
@@ -17,8 +17,8 @@ export default function CreatePage() {
           Launch a token
         </h1>
         <p className="mt-4 text-lead text-ink-2">
-          Nothing up front. Buyers fund it, and at four ETH it gets a real
-          pool.
+          No liquidity needed. Buyers fund it on a bonding curve, and at four
+          ETH it graduates into a Uniswap pool.
         </p>
       </header>
 
