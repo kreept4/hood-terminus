@@ -36,16 +36,27 @@ export function Hero() {
         <HeroField />
       </div>
 
-      <div className="gutter relative z-10">
+      <div className="gutter @container relative z-10">
         <HeroParallax className="max-w-3xl">
           {/* One line at every width.
 
               The size is fluid rather than stepped, because a headline that
               wraps at one breakpoint and not another is two different
-              headlines. `clamp` keeps it on a single line from 390px up without
-              a media query deciding where it breaks. */}
+              headlines. `clamp` keeps it on a single line without a media
+              query deciding where it breaks.
+
+              Sized in `cqw`, against the column it sits in, rather than `vw`.
+              That was the bug: the viewport includes the 256px sidebar, so at
+              1032px the headline asked for 52.6px of type and drew 800px of
+              text into a 776px column. The section clips rather than wraps,
+              so the end of the line was simply cut off, worst at iPad widths
+              where the sidebar takes the largest share of the screen.
+
+              6.4cqw is the ratio measured from the rendered font: this string
+              draws about 15.2px of width per 1px of type, so 1/15.2 of the
+              column fills it exactly and the rest is margin. */}
           <h1 className="leading-[1.05] font-bold tracking-tight text-ink">
-            <PixelReveal className="block whitespace-nowrap text-[clamp(1.15rem,5.1vw,3.75rem)]">
+            <PixelReveal className="block whitespace-nowrap text-[clamp(1.15rem,6.4cqw,3.75rem)]">
               Check a token before you buy it
             </PixelReveal>
           </h1>
