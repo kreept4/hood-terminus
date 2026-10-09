@@ -36,6 +36,15 @@ type Item = {
   href: string;
   label: string;
   Icon: (props: { className?: string }) => React.ReactElement;
+  /**
+   * Carries the brand colour at rest.
+   *
+   * Launching is how this product earns, and in a rail of seven identical grey
+   * rows it read as the seventh most important thing here. The accent button is
+   * spoken for by Verify, so this is the quieter version of the same signal: a
+   * tint rather than a fill, enough to find without competing.
+   */
+  tint?: boolean;
 };
 
 /**
@@ -74,7 +83,7 @@ const GROUPS: readonly Group[] = [
   },
   {
     heading: "Launch",
-    items: [{ href: "/create", label: "Launch", Icon: IconPlus }],
+    items: [{ href: "/create", label: "Launch", Icon: IconPlus, tint: true }],
   },
 ];
 
@@ -292,7 +301,7 @@ function Group({
 
   return (
     <div className="flex flex-col gap-0.5">
-      {items.map(({ href, label, Icon }) => {
+      {items.map(({ href, label, Icon, tint }) => {
         const active = isActive(pathname, href);
         const badge = href === "/alerts" ? alertCount : 0;
         return (
@@ -306,7 +315,9 @@ function Group({
               collapsed ? "h-10 justify-center" : "gap-3 px-3 py-2",
               active
                 ? "bg-surface-2 font-medium text-ink"
-                : "text-ink-2 hover:text-ink",
+                : tint
+                  ? "border border-green-line bg-green-deep text-green hover:text-green"
+                  : "text-ink-2 hover:text-ink",
             )}
           >
             {/* Fades up behind the label rather than around it, so nothing

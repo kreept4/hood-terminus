@@ -1,49 +1,63 @@
+"use client";
+
 import Link from "next/link";
 import { HeroParallax } from "@/components/visual/HeroParallax";
 import { PixelReveal } from "@/components/visual/PixelReveal";
+import { useAssistantName } from "@/lib/assistant";
 
 /**
  * The hero.
  *
- * A claim and one button, and no figures.
+ * It was removed, and it is back for a reason: a terminal with no opening
+ * statement reads as a tool somebody has to already understand. What it is not
+ * allowed to be is the version that was removed, which was `min-h-dvh` and put
+ * a claim and a button where the chain should have been. On a 390px screen the
+ * entire first view was marketing and the data began below the fold.
  *
- * It carried a row of four, and `ChainStats` directly below it carried the same
- * three plus one more. Two of everything on one screen does not read as
- * thoroughness, it reads as a page that does not know what it holds. The row
- * below survived because it refreshes on its own.
+ * So it keeps the old language, display type with the reveal and the parallax,
+ * one claim, one action, and no figures, because `ChainStats` directly below
+ * owns those and two of everything on one screen reads as a page that does not
+ * know what it holds.
  *
- * Dropping them also took the two upstream fetches with it, which is a real
- * saving on a rate-limited free tier rather than a tidy-up.
+ * What it does not keep is the height. It is sized to leave the board visible
+ * on the first screen, which is the thing the removal was protecting.
+ *
+ * The claim itself is Travis, because that is the moat. Anyone can list pairs;
+ * the product worth describing in one sentence is the one that tells you
+ * whether you can get your money back out.
  */
 export function Hero() {
+  const assistant = useAssistantName();
+
   return (
-    <section className="gutter flex min-h-dvh flex-col justify-center py-16">
+    <section className="gutter pt-10 pb-8 md:pt-14 md:pb-10">
       <HeroParallax className="max-w-3xl">
-        <h1 className="text-display leading-none font-bold tracking-tight text-ink">
-          <PixelReveal className="block">
-            Launch and trade on Robinhood Chain
-          </PixelReveal>
+        <h1 className="text-h1 leading-none font-bold tracking-tight text-ink md:text-display">
+          <PixelReveal className="block">Can I sell it?</PixelReveal>
         </h1>
+
         <p className="mt-5 max-w-xl text-lead text-ink-2">
-          Launch a token with nothing up front and earn the fees it trades on.
-          Watch every pair on the chain while you are here.
+          {assistant} buys about ten dollars of a token and sells it straight
+          back through its own pool before you commit a penny. Nothing is
+          signed, nothing is spent, and a check that cannot run says so rather
+          than passing.
         </p>
 
-        <div className="mt-7">
+        <div className="mt-7 flex flex-wrap items-center gap-3">
           <Link
-            href="/create"
+            href="/verify"
             className="inline-block rounded-md bg-green px-5 py-3 text-body font-semibold text-on-accent transition-opacity duration-100 hover:opacity-90"
           >
-            Create a token
+            Ask {assistant} about a token
+          </Link>
+          <Link
+            href="/create"
+            className="inline-block rounded-md border border-green-line bg-green-deep px-5 py-3 text-body font-medium text-green transition-opacity duration-100 hover:opacity-90"
+          >
+            Launch a token
           </Link>
         </div>
       </HeroParallax>
-
-      {/* The figures moved out of the hero to `ChainStats` below it.
-          Both existed for a while and three of the four were the same number
-          twice on one screen, which reads as the page not knowing what it
-          holds. The one underneath refreshes on its own, so it is the one that
-          survived. */}
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { ErrorPanel, SkeletonRows } from "@/components/primitives/States";
 import type { Check, VerifyReport } from "@/lib/verify/types";
 import { STATUS_TONE, STATUS_WORD, VERDICT_TONE, VERDICT_WORD } from "./tone";
 import { useVerify } from "./useVerify";
+import { useAssistantName } from "@/lib/assistant";
 
 /**
  * Verify, on the token page.
@@ -84,6 +85,7 @@ export function VerifyPanel({ token, className }: { token: string; className?: s
    * remembered: the next token is a different question.
    */
   const [open, setOpen] = useState(true);
+  const assistant = useAssistantName();
 
   return (
     <section
@@ -94,7 +96,7 @@ export function VerifyPanel({ token, className }: { token: string; className?: s
       <header className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <h2 id="verify-title" className="text-small text-ink-2">
-            Travis
+            {assistant}
           </h2>
           {report && <Mark className={VERDICT_TONE[report.verdict]}>{VERDICT_WORD[report.verdict]}</Mark>}
           {report && (
@@ -139,10 +141,12 @@ export function VerifyPanel({ token, className }: { token: string; className?: s
       {isPending ? (
         <SkeletonRows rows={6} height={44} />
       ) : error || !report ? (
-        <ErrorPanel title={error instanceof Error ? error.message : "Travis could not run."} onRetry={() => refetch()} />
+        <ErrorPanel title={error instanceof Error ? error.message : `${assistant} could not run.`} onRetry={() => refetch()} />
       ) : (
         <>
-          <p className="px-4 pb-1 text-micro text-ink-3">Here is what Travis thinks</p>
+          <p className="px-4 pb-1 text-micro text-ink-3">
+            Here is what {assistant} thinks
+          </p>
           <p className="px-4 pb-3 text-body text-ink">{report.headline}</p>
           <CostStrip report={report} />
           <ul className="divide-y divide-line-soft border-t border-line-soft">

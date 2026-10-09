@@ -5,6 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { truncateAddress } from "@/lib/format";
+import {
+  useAssistantName,
+  setAssistantName,
+  DEFAULT_ASSISTANT,
+} from "@/lib/assistant";
 
 /**
  * The paste box, and the last few things checked.
@@ -122,6 +127,8 @@ export function VerifyBox() {
         </p>
       )}
 
+      <AssistantName />
+
       {recent.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-micro text-ink-3">Recent</span>
@@ -177,5 +184,79 @@ function ShareLink({ token }: { token: string }) {
     >
       {copied ? "Link copied" : "Copy a link to this report"}
     </button>
+  );
+}
+
+/**
+ * Renaming the assistant.
+ *
+ * Travis is a default, not a brand. Somebody who renames him has decided he is
+ * theirs, which is the point of giving him a name rather than a product label.
+ *
+ * It lives here rather than behind a settings page because this is where he is,
+ * and a preference two clicks from the thing it affects is a preference nobody
+ * finds. Stored in this browser and never sent anywhere.
+ */
+function AssistantName() {
+  const assistant = useAssistantName();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(assistant);
+
+  if (!editing) {
+    return (
+      <p className="mt-3 text-micro text-ink-3">
+        Your assistant is called {assistant}.{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(assistant);
+            setEditing(true);
+          }}
+          className="text-ink-2 underline underline-offset-2 transition-colors duration-100 hover:text-green"
+        >
+          Give him another name
+        </button>
+      </p>
+    );
+  }
+
+  function save() {
+    setAssistantName(draft);
+    setEditing(false);
+  }
+
+  return (
+    <form
+      className="mt-3 flex items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        maxLength={24}
+        autoFocus
+        aria-label="What to call your assistant"
+        className="h-9 w-44 rounded-md border border-line bg-surface-2 px-3 text-body text-ink focus:border-green focus:outline-none"
+      />
+      <button
+        type="submit"
+        className="h-9 rounded-md border border-line px-3 text-micro text-ink-2 transition-colors duration-100 hover:border-green hover:text-green"
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setAssistantName(DEFAULT_ASSISTANT);
+          setEditing(false);
+        }}
+        className="h-9 rounded-md px-2 text-micro text-ink-3 transition-colors duration-100 hover:text-ink"
+      >
+        Reset
+      </button>
+    </form>
   );
 }

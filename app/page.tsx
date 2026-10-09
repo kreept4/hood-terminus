@@ -3,6 +3,7 @@ import Link from "next/link";
 import { clsx } from "@/lib/clsx";
 import { GasMonitor } from "@/components/market/GasMonitor";
 import { getCurveTokens } from "@/lib/launchpad/curve";
+import { Hero } from "@/components/discover/Hero";
 import { Screener } from "@/components/discover/Screener";
 import { TerminalHeader } from "@/components/discover/TerminalHeader";
 import { Section } from "@/components/primitives/Section";
@@ -190,6 +191,8 @@ export default async function DiscoverPage({ searchParams }: Props) {
           screen on a phone held a claim and a button and no data at all. The
           board is the product; it now begins above the fold on a 390px screen.
           The pitch moved to /create, which is the page it was selling. */}
+      <Hero />
+
       <TerminalHeader initialQuery={query} />
 
       {/* Four live numbers answering whether anything is happening here, before

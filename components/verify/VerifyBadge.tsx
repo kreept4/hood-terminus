@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { clsx } from "@/lib/clsx";
 import { useVerify } from "./useVerify";
+import { useAssistantName } from "@/lib/assistant";
 import { VERDICT_TONE, VERDICT_WORD } from "./tone";
 import type { VerifyReport } from "@/lib/verify/types";
 
@@ -24,13 +25,14 @@ export function VerifyBadge({
   className?: string;
 }) {
   const { data, isLoading, isError } = useVerify(token);
+  const assistant = useAssistantName();
 
   if (!token) return null;
 
   if (isLoading) {
     return (
       <span className={clsx("text-micro text-ink-3", className)}>
-        Checking if you could sell it
+        {assistant} is checking if you could sell it
       </span>
     );
   }
@@ -45,7 +47,7 @@ export function VerifyBadge({
   if (isError || !data) {
     return (
       <span className={clsx("text-micro text-ink-3", className)}>
-        Could not check this token
+        {assistant} could not check this token
       </span>
     );
   }
