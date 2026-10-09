@@ -161,12 +161,17 @@ export function PnlBoard({ wallets }: { wallets: WalletPnl[] }) {
                   {rows.map((w) => (
                     <tr
                       key={w.walletAddress}
-                      className="group border-b border-line-soft transition-colors duration-100 last:border-b-0 hover:bg-surface-2"
+                      className="group relative border-b border-line-soft transition-colors duration-100 last:border-b-0 hover:bg-surface-2"
                     >
                       <td className="py-2.5 pl-4">
+                        {/* Stretched over the whole row. The row already
+                            highlights on hover, so anything less made most of
+                            it look clickable and do nothing. The Track button
+                            is lifted above the overlay rather than nested in
+                            the link, which would be invalid and eat its click. */}
                         <Link
                           href={`/w/${w.walletAddress}`}
-                          className="tnum text-body text-ink transition-colors duration-100 group-hover:text-green"
+                          className="tnum text-body text-ink transition-colors duration-100 group-hover:text-green after:absolute after:inset-0 after:content-['']"
                         >
                           {truncateAddress(w.walletAddress, 6)}
                         </Link>
@@ -186,7 +191,7 @@ export function PnlBoard({ wallets }: { wallets: WalletPnl[] }) {
                       <td className="tnum hidden px-3 py-2.5 text-right text-body text-ink-2 md:table-cell">
                         {w.poolCount}
                       </td>
-                      <td className="py-2.5 pr-4 text-right">
+                      <td className="relative z-10 py-2.5 pr-4 text-right">
                         <TrackButton address={w.walletAddress} compact />
                       </td>
                     </tr>
@@ -213,7 +218,8 @@ export function PnlBoard({ wallets }: { wallets: WalletPnl[] }) {
   );
 }
 
-function Profit({ eth }: { eth: number }) {
+/** Exported so a wallet's own page states profit the same way the board does. */
+export function Profit({ eth }: { eth: number }) {
   const positive = eth > 0;
   return (
     <span

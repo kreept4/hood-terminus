@@ -209,9 +209,37 @@ function queued<T>(run: () => Promise<T>): Promise<T> {
   return next;
 }
 
+/**
+ * How many times to wait out a rate limit, and for how long.
+ *
+ * One retry was not enough. This upstream is a free tier and every request in
+ * this process shares its budget: a single token page asks for the pool, its
+ * candles, its other markets, the token's info and the token's pools, so a
+ * handful of readers is all it takes to start collecting 429s. Each one became
+ * a null, and a null became an empty chart reading "no candles for this
+ * timeframe yet" on a pair with eight million dollars of daily volume.
+ *
+ * Backing off three times costs a slow page in the worst case. Giving up costs
+ * a product that looks like it has no data, which is worse, and which is what
+ * it was doing.
+ */
+const RETRY_MS = [600, 1500, 3000] as const;
+
+/**
+ * The last good answer for a path, kept so a rate limit degrades to stale data
+ * rather than to nothing.
+ *
+ * Next's own `revalidate` cache does not help here: it serves what it has until
+ * it expires, and then a failed refresh is still a failure. This is the floor
+ * underneath that. Market data minutes old is worth far more than an empty
+ * chart, as long as nothing claims it is live.
+ */
+const lastGood = new Map<string, { at: number; value: unknown }>();
+const STALE_MS = 10 * 60_000;
+
 async function get<T>(path: string, revalidate: number): Promise<T | null> {
-  return queued(async () => {
-    for (let attempt = 0; attempt < 2; attempt++) {
+  const fresh = await queued(async () => {
+    for (let attempt = 0; attempt <= RETRY_MS.length; attempt++) {
       try {
         const res = await fetch(`${BASE}${path}`, {
           headers: { accept: "application/json" },
@@ -219,8 +247,8 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
         });
 
         // The one status worth waiting out. Everything else is an answer.
-        if (res.status === 429 && attempt === 0) {
-          await new Promise((r) => setTimeout(r, 1200));
+        if (res.status === 429 && attempt < RETRY_MS.length) {
+          await new Promise((r) => setTimeout(r, RETRY_MS[attempt]));
           continue;
         }
 
@@ -234,6 +262,15 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
     }
     return null;
   });
+
+  if (fresh !== null) {
+    lastGood.set(path, { at: Date.now(), value: fresh });
+    return fresh;
+  }
+
+  const held = lastGood.get(path);
+  if (held && Date.now() - held.at < STALE_MS) return held.value as T;
+  return null;
 }
 
 type IncludedToken = {
@@ -363,14 +400,25 @@ export async function getPoolWithLogo(
 
 /** Which pool is the primary market for a token. */
 export async function getPoolsForToken(address: string): Promise<Pool[]> {
+  /**
+   * `include=base_token`, like every other pool request here.
+   *
+   * It was the only one without it. `imagesFrom` reads the artwork out of the
+   * `included` block, and without the parameter that block comes back empty, so
+   * every row this fed rendered a monogram instead of the token's own mark.
+   * That is the "other markets" table on a token page: the same token, with its
+   * logo in the header and a grey initial two inches below it.
+   *
+   * It costs nothing. The tokens are already being joined to build the response.
+   */
   const json = await get<PoolList>(
-    `/networks/${NETWORK}/tokens/${address}/pools?page=1`,
+    `/networks/${NETWORK}/tokens/${address}/pools?page=1&include=base_token`,
     30,
   );
   return (json?.data ?? []).map((raw) => normalise(raw, imagesFrom(json?.included)));
 }
 
-export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "12h" | "1d";
 
 /** GeckoTerminal splits timeframe and aggregate; the UI thinks in one label. */
 const TF: Record<Timeframe, { path: string; aggregate: number }> = {
@@ -379,6 +427,8 @@ const TF: Record<Timeframe, { path: string; aggregate: number }> = {
   "15m": { path: "minute", aggregate: 15 },
   "1h": { path: "hour", aggregate: 1 },
   "4h": { path: "hour", aggregate: 4 },
+  // The last aggregate this upstream offers on the hour endpoint.
+  "12h": { path: "hour", aggregate: 12 },
   "1d": { path: "day", aggregate: 1 },
 };
 
@@ -438,6 +488,18 @@ export type ScreenSort =
   | "losers"
   | "volume"
   | "liquidity";
+
+/**
+ * Whether a pool has a market at all.
+ *
+ * Separate from the liquidity floor on purpose. The floor is the reader's
+ * preference about size; this is the question of whether there is anything to
+ * measure. A pool with no liquidity has a price in the sense that arithmetic
+ * produces one, and no price in the sense anybody can trade at it.
+ */
+function tradeable(pool: Pool): boolean {
+  return (pool.liquidityUsd ?? 0) > 0;
+}
 
 export function screen(
   pools: Pool[],
@@ -499,16 +561,44 @@ export function screen(
   const liquid = population.filter((p) => (p.liquidityUsd ?? 0) >= floor);
 
   switch (sort) {
+    /**
+     * Movers, ranked by percentage but never by percentage alone.
+     *
+     * A pool holding nothing has no meaningful price change. The smallest
+     * trade possible moves its price arbitrarily far, so its percentage is an
+     * artefact of having no market rather than a measurement of one. Sorted
+     * purely on that number, dust won: on a live snapshot of 130 pools with
+     * the floor set to "Any", a pool with zero liquidity ranked third while a
+     * pool holding over $100,000 ranked sixty-fifth.
+     *
+     * So pools with no liquidity are dropped from the change boards outright.
+     * This is not the liquidity floor doing its job twice: the floor is a
+     * preference about how small a market the reader wants to see, and "Any"
+     * has to keep meaning any. Zero is different in kind. There is no market
+     * to show, and a gainers board exists to list things you could have
+     * bought.
+     *
+     * Exact ties then break by liquidity, so where two pools moved the same
+     * amount the deeper market reads first.
+     */
     case "gainers":
       return liquid
-        .filter((p) => (p.change[window] ?? 0) > 0)
-        .sort((a, b) => (b.change[window] ?? 0) - (a.change[window] ?? 0))
+        .filter((p) => tradeable(p) && (p.change[window] ?? 0) > 0)
+        .sort(
+          (a, b) =>
+            (b.change[window] ?? 0) - (a.change[window] ?? 0) ||
+            (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0),
+        )
         .slice(0, limit);
 
     case "losers":
       return liquid
-        .filter((p) => (p.change[window] ?? 0) < 0)
-        .sort((a, b) => (a.change[window] ?? 0) - (b.change[window] ?? 0))
+        .filter((p) => tradeable(p) && (p.change[window] ?? 0) < 0)
+        .sort(
+          (a, b) =>
+            (a.change[window] ?? 0) - (b.change[window] ?? 0) ||
+            (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0),
+        )
         .slice(0, limit);
 
     case "volume":

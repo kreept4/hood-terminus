@@ -30,7 +30,7 @@ import { formatPrice, formatUsd } from "@/lib/format";
  * would be slower than doing it and pointless either way.
  */
 
-const TIMEFRAMES: Timeframe[] = ["1m", "5m", "15m", "1h", "4h", "1d"];
+const TIMEFRAMES: Timeframe[] = ["1m", "5m", "15m", "1h", "4h", "12h", "1d"];
 
 type Overlay = "ema9" | "ema21" | "sma50" | "vwap" | "bb";
 
@@ -126,6 +126,24 @@ export function PriceChart({
   const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
   const [candles, setCandles] = useState<Candle[]>(initialCandles);
   const [loading, setLoading] = useState(false);
+  // Whether the last attempt to load candles failed, as opposed to succeeding
+  // and finding none. The two look identical on screen and mean opposite
+  // things: one is our problem and the other is the pool's.
+  const [failed, setFailed] = useState(false);
+
+  /**
+   * Candles already fetched, by timeframe.
+   *
+   * Switching is a client fetch rather than a navigation, so it never re-renders
+   * the server, but every switch still cost a round trip against a rate limited
+   * upstream, including switching back to one just looked at. Holding them for
+   * the life of the page makes a second visit to a timeframe instant and takes
+   * the load off the feed that was emptying charts in the first place.
+   *
+   * A ref rather than state: nothing renders from it directly, and writing to it
+   * should not itself cause a render.
+   */
+  const cached = useRef<Map<Timeframe, Candle[]>>(new Map());
   const [logScale, setLogScale] = useState(false);
   const [active, setActive] = useState<Set<Overlay>>(new Set(["ema21"]));
   const [hover, setHover] = useState<Candle | null>(null);
@@ -304,12 +322,31 @@ export function PriceChart({
   async function pick(tf: Timeframe) {
     if (tf === timeframe) return;
     setTimeframe(tf);
+    setFailed(false);
+
+    const held = cached.current.get(tf);
+    if (held) {
+      setCandles(held);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(
         `/api/candles?pool=${poolAddress}&tf=${tf}`,
       );
-      if (res.ok) setCandles((await res.json()) as Candle[]);
+      if (res.ok) {
+        const next = (await res.json()) as Candle[];
+        // Only a non-empty answer is worth keeping. Caching an empty one would
+        // pin a timeframe as permanently blank for the life of the page, which
+        // is exactly the failure this is meant to stop.
+        if (next.length > 0) cached.current.set(tf, next);
+        setCandles(next);
+      } else {
+        setFailed(true);
+      }
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -418,7 +455,9 @@ export function PriceChart({
         {!loading && candles.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-body text-ink-3">
-              No candles for this timeframe yet
+              {failed
+                ? "Could not load the chart. Try another timeframe."
+                : "No price history for this timeframe."}
             </span>
           </div>
         )}

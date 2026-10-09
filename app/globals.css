@@ -195,6 +195,30 @@ body {
   display: none;
 }
 
+/* Gives a small control a 44px hit area without changing how it looks.
+
+   A few icon buttons are drawn at 28 to 36px, which is right visually and
+   wrong for a thumb: a close button on a wallet sheet or the dismiss on the
+   install prompt is a 32px target on the surface most likely to be used on a
+   phone. Growing the box would have meant redrawing the controls around it, so
+   the box stays and the target grows underneath it.
+
+   Centred on the control and laid out absolutely, so it adds nothing to flow
+   and cannot push a row wider. Anything that needs its own ::after keeps it;
+   this is only applied where the slot was free. */
+.tap-44 {
+  position: relative;
+}
+.tap-44::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
 /* ── gas verdict ───────────────────────────────────────────────
    A slow breath on the border and fill only. Nothing moves and no
    text changes weight, because this sits in a row of numbers and a

@@ -28,6 +28,9 @@
   --color-red: var(--c-red);
   --color-red-line: var(--c-red-line);
   --color-red-deep: var(--c-red-deep);
+  --color-amber: var(--c-amber);
+  --color-amber-line: var(--c-amber-line);
+  --color-amber-deep: var(--c-amber-deep);
   --color-green: var(--c-green);
   --color-on-accent: var(--c-on-accent);
 
@@ -113,6 +116,9 @@
   --c-red: #f24522;
   --c-red-line: #611e11;
   --c-red-deep: #400e05;
+  --c-amber: #f0b135;
+  --c-amber-line: #513801;
+  --c-amber-deep: #322101;
   --c-green: #CCFF00;
   --c-on-accent: #030302;
 }

@@ -9,15 +9,18 @@ import { Card } from "@/components/primitives/Card";
 import { Delta } from "@/components/primitives/Delta";
 import { Stat, StatRow } from "@/components/primitives/Stat";
 import { CopyAddress } from "@/components/wallet/CopyAddress";
+import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { IconExternal } from "@/components/shell/NavIcons";
 import { TokenLogo } from "@/components/market/TokenLogo";
 import { robinhoodChain } from "@/lib/chain";
+import { venueName } from "@/lib/verify/venue";
 import {
   getCandles,
   getPool,
   getPoolWithLogo,
   findPoolInFeeds,
   getPoolsForToken,
+  isRoutable,
 } from "@/lib/market/gecko";
 import {
   formatAge,
@@ -85,6 +88,18 @@ export async function generateMetadata({ params }: Params) {
 
 export default async function TokenPage({ params }: Params) {
   const { address } = await params;
+
+  /**
+   * The candles are asked for before the pool is looked up, not after it.
+   *
+   * Every link into this page is built from a pool address, so this request
+   * does not need the lookup's answer, and waiting for it turned one round
+   * trip into two against a rate limited API. The catch is what makes starting
+   * early safe: if this is not a pool address the answer is thrown away rather
+   * than becoming an unhandled rejection.
+   */
+  const candlesEarly = getCandles(address, "1h").catch(() => null);
+
   let found = await getPoolWithLogo(address);
 
   /**
@@ -114,12 +129,17 @@ export default async function TokenPage({ params }: Params) {
   }
   const { pool, logo } = found;
 
-  const [candles, markets] = await Promise.all([
-    getCandles(pool.address, "1h"),
+  // The early request is only reusable if it asked about this same pool, which
+  // it did unless the lookup resolved to a different one.
+  const samePool = pool.address.toLowerCase() === address.toLowerCase();
+
+  const [candlesMaybe, markets] = await Promise.all([
+    samePool ? candlesEarly : getCandles(pool.address, "1h"),
     pool.baseTokenAddress
       ? getPoolsForToken(pool.baseTokenAddress)
       : Promise.resolve([]),
   ]);
+  const candles = candlesMaybe ?? (await getCandles(pool.address, "1h"));
 
   const others = markets.filter(
     (m) => m.address.toLowerCase() !== pool.address.toLowerCase(),
@@ -132,6 +152,19 @@ export default async function TokenPage({ params }: Params) {
   // to be a ratio rather than a coincidence.
   const buyShare = trades >= 10 ? (buys / trades) * 100 : null;
   const explorer = robinhoodChain.blockExplorers.default.url;
+
+  /**
+   * Whether this pair can actually be traded here.
+   *
+   * The same two conditions the trade panel itself applies: a Uniswap v3 style
+   * pool it knows how to quote, priced in ETH. "Trade" used to link to /trade
+   * with nothing selected, which on this chain is a dead end for most pairs,
+   * since the majority trade on v4 launchpad hooks or against USDG. Saying so,
+   * and naming where the pair does trade, is more use than a button that opens
+   * a panel which cannot serve it.
+   */
+  const routable = isRoutable(pool) && pool.quoteSymbol === "WETH";
+  const venue = venueName(pool.dex);
 
   return (
     <div className="gutter py-8 md:py-10">
@@ -168,12 +201,29 @@ export default async function TokenPage({ params }: Params) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/trade"
-            className="rounded-md bg-green px-4 py-2.5 text-body font-semibold text-on-accent transition-opacity duration-100 hover:opacity-90"
-          >
-            Trade {pool.symbol}
-          </Link>
+          {routable ? (
+            <Link
+              href={`/trade?pool=${pool.address}`}
+              className="rounded-md bg-green px-4 py-2.5 text-body font-semibold text-on-accent transition-opacity duration-100 hover:opacity-90"
+            >
+              Trade {pool.symbol}
+            </Link>
+          ) : (
+            <div className="max-w-xs">
+              <p className="text-micro text-ink-3">
+                Trading here covers Uniswap v3 pairs against ETH for now. This
+                pair trades on {venue}.
+              </p>
+              <a
+                href={`https://www.geckoterminal.com/robinhood/pools/${pool.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-micro text-ink-2 underline underline-offset-2 transition-colors duration-100 hover:text-green"
+              >
+                Open on GeckoTerminal
+              </a>
+            </div>
+          )}
           <a
             href={`${explorer}/address/${pool.baseTokenAddress ?? pool.address}`}
             target="_blank"
@@ -195,6 +245,17 @@ export default async function TokenPage({ params }: Params) {
           initialTimeframe="1h"
         />
       </Card>
+
+      {/* ── Verify ─────────────────────────────────────────────────── */}
+      {/* Directly under the chart, above the figures.
+
+          The question this answers, can I sell this, is asked before any of the
+          numbers below matter: a market cap on a token nobody can exit is not a
+          figure, it is bait. It needs the base token rather than the pool,
+          because the contract with the powers is the token's. */}
+      {pool.baseTokenAddress && (
+        <VerifyPanel token={pool.baseTokenAddress} className="mt-4" />
+      )}
 
       {/* ── Figures ────────────────────────────────────────────────── */}
       <Card className="mt-4 px-5 py-5">

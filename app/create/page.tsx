@@ -1,11 +1,12 @@
 import { CreateForm } from "@/components/create/CreateForm";
+import { CreatePitch } from "@/components/create/CreatePitch";
 import { YourTokens } from "@/components/create/YourTokens";
 import { OwnerPanel } from "@/components/create/OwnerPanel";
 
 export const metadata = {
   title: "Create a token",
   description:
-    "Launch a token on Robinhood Chain with nothing up front and keep the fees it trades on.",
+    "Launch a token on Robinhood Chain with no liquidity needed, and take a share of the 1% trade fee while it is on the bonding curve.",
 };
 
 export default function CreatePage() {
@@ -16,10 +17,18 @@ export default function CreatePage() {
           Launch a token
         </h1>
         <p className="mt-4 text-lead text-ink-2">
-          Nothing up front. Buyers fund it, and at four ETH it gets a real
-          pool.
+          You put in no money of your own. Buyers fund it as they buy, and once
+          four ETH has gone in, your token opens as a normal market anyone can
+          trade.
         </p>
       </header>
+
+      {/* The pitch. It used to sit on the homepage, between the chain stats and
+          the board, where it interrupted a terminal to sell a feature. Here it
+          is in front of the people who already chose to launch something, and
+          its visual effects are welcome because nothing on this page is a live
+          number waiting to be read. */}
+      <CreatePitch />
 
       <div className="mt-8">
         <CreateForm />

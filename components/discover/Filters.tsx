@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { WINDOWS, type Window, type ScreenSort } from "@/lib/market/gecko";
 import { clsx } from "@/lib/clsx";
 
@@ -14,9 +12,11 @@ import { clsx } from "@/lib/clsx";
  * quieter row. An earlier version put all three groups in one line of
  * identical pills, which made a choice of subject look like a choice of filter.
  *
- * State lives in the URL rather than in React, so a view worth watching can be
- * bookmarked or sent to someone, and the server renders the right board on the
- * first request instead of flashing the default and correcting itself.
+ * This component is presentational. Every control reports upwards and `Screener`
+ * holds the state, because all four are arithmetic over rows the browser already
+ * has. The URL is still kept current, so a view worth watching can be bookmarked
+ * or sent to someone and a cold request renders the right board, but it is
+ * written without a navigation and nothing here waits on the server.
  */
 
 /**
@@ -96,78 +96,39 @@ export function Filters({
   sort,
   window,
   minLiquidity,
-  query,
   quote,
   quotes,
+  onSort,
+  onWindow,
+  onLiquidity,
+  onQuote,
 }: {
   sort: ScreenSort;
   window: Window;
   minLiquidity: number;
-  query: string;
   quote: string;
   /** The quote assets actually present, commonest first. */
   quotes: { symbol: string; count: number }[];
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
-
-  const set = useCallback(
-    (key: string, value: string) => {
-      const next = new URLSearchParams(params.toString());
-      next.set(key, value);
-      // scroll: false so changing a filter does not throw the board the reader
-      // is looking at back to the top of the page.
-      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-    },
-    [params, pathname, router],
-  );
-
   /**
-   * The search box is typed into locally and pushed to the URL on a pause.
-   *
-   * Writing every keystroke to the URL would re-render the server component and
-   * refetch on every letter. A third of a second is long enough that a word is
-   * one navigation and short enough that it never feels held back.
+   * Board and settings are handled by the parent in React state, not by a
+   * navigation. All four are arithmetic over rows the browser already holds, so
+   * routing them through the server made a one-click setting wait on three
+   * upstream feeds. See `Screener`.
    */
-  const [text, setText] = useState(query);
-
-  useEffect(() => {
-    setText(query);
-  }, [query]);
-
-  useEffect(() => {
-    if (text === query) return;
-    const id = setTimeout(() => set("q", text), 320);
-    return () => clearTimeout(id);
-  }, [text, query, set]);
-
+  onSort: (value: ScreenSort) => void;
+  onWindow: (value: Window) => void;
+  onLiquidity: (value: number) => void;
+  onQuote: (value: string) => void;
+}) {
+  // Nothing here touches the router any more. Every control is state in
+  // `Screener`, and the search box moved to `TerminalHeader` at the top of the
+  // page, which owns the `q` parameter.
   return (
     <div>
-      {/* ── Search, above the boards, because it searches all of them ─ */}
-      <div className="flex items-center gap-2 border-b border-line-soft px-3 py-2.5">
-        <IconSearch />
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Search by name, ticker or contract address"
-          spellCheck={false}
-          autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none"
-        />
-        {text !== "" && (
-          <button
-            type="button"
-            onClick={() => {
-              setText("");
-              set("q", "");
-            }}
-            className="shrink-0 rounded-md px-2 py-1 text-micro text-ink-3 transition-colors duration-100 hover:text-ink"
-          >
-            Clear
-          </button>
-        )}
-      </div>
+      {/* Search used to sit here, above the boards. It is now the input at the
+          top of the page, where it is the first thing on screen and takes a
+          pasted address as well as a ticker. Two boxes writing the same `q`
+          would have been two sources of truth for one query. */}
 
       {/* ── Board tabs, sitting on the table's edge ─────────────────── */}
       <div
@@ -183,7 +144,7 @@ export function Filters({
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => set("sort", s.value)}
+              onClick={() => onSort(s.value)}
               className={clsx(
                 "relative shrink-0 px-3 py-2.5 text-body whitespace-nowrap",
                 "transition-colors duration-100",
@@ -214,7 +175,7 @@ export function Filters({
           label="Window"
           options={WINDOWS.map((w) => ({ value: w, label: w }))}
           value={window}
-          onChange={(v) => set("t", v)}
+          onChange={(v) => onWindow(v as Window)}
         />
         <span className="h-5 w-px shrink-0 bg-line-soft" aria-hidden="true" />
         <Segmented
@@ -224,7 +185,7 @@ export function Filters({
             label: l.label,
           }))}
           value={String(minLiquidity)}
-          onChange={(v) => set("liq", v)}
+          onChange={(v) => onLiquidity(Number(v))}
         />
 
         {/* Only when there is a choice to make. On a chain where everything
@@ -243,31 +204,12 @@ export function Filters({
                 })),
               ]}
               value={quote}
-              onChange={(v) => set("pair", v)}
+              onChange={(v) => onQuote(v)}
             />
           </>
         )}
       </div>
     </div>
-  );
-}
-
-function IconSearch() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      aria-hidden="true"
-      className="shrink-0 text-ink-3"
-    >
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="M15.4 15.4 20 20" />
-    </svg>
   );
 }
 

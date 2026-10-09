@@ -48,7 +48,7 @@ export function ErrorPanel({
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-sm border border-line px-2.5 py-1 text-small text-ink-2 transition-colors duration-100 hover:border-green-line hover:text-ink"
+          className="tap-44 rounded-sm border border-line px-2.5 py-1 text-small text-ink-2 transition-colors duration-100 hover:border-green-line hover:text-ink"
         >
           Retry
         </button>

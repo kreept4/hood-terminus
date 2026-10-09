@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A new push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `.npmrc` sets legacy-peer-deps for one dependency conflict inside
+      # Privy's optional peers, so this has to run with the repo's own config
+      # rather than a clean default.
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # `NEXT_PUBLIC_*` values are inlined at build time, so the build needs
+      # something in the right shape for each or it fails on a page that reads
+      # one. These are placeholders and reach no service: the
+      # Supabase URL only has to parse. Real values live in Vercel.
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: placeholder
+          NEXT_PUBLIC_CHAIN_ID: "4663"
+        run: npm run build
+
+  contracts:
+    name: Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      # Its own toolchain, its own dependencies, its own job. The root
+      # `tsconfig.json` and eslint config both exclude this directory for the
+      # same reason, so hardhat is the only thing that checks it.
+      - run: npm ci
+        working-directory: contracts
+
+      - run: npx hardhat test
+        working-directory: contracts

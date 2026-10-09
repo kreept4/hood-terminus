@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 /**
  * Text that resolves out of coarse pixels.
@@ -59,36 +59,94 @@ export function PixelReveal({
     const sctx = source.getContext("2d");
     if (!sctx) return;
 
-    sctx.scale(dpr, dpr);
-    sctx.fillStyle = style.color;
-    sctx.textBaseline = "top";
-    sctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} / ${style.lineHeight} ${style.fontFamily}`;
-
-    // Wrap by hand. The canvas has no notion of a line box, so the text has to
-    // be broken to the same width the DOM already broke it to.
-    const text = el.innerText.trim();
-    const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.1;
-    const words = text.split(/\s+/);
-    const lines: string[] = [];
-    let line = "";
-
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (sctx.measureText(candidate).width > W && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = candidate;
+    /**
+     * Everything the context needs to draw this text the way the DOM does.
+     *
+     * A function because resizing a canvas resets its context completely, and
+     * the canvas has to be resized once the text has been measured. Setting
+     * this twice is the price of measuring before sizing.
+     *
+     * Letter spacing is here because the `font` shorthand cannot carry it, and
+     * leaving it out was the fault being fixed. The headline is tracked tight,
+     * so the canvas drew the same string wider than the DOM did. The wrap below
+     * then saw it exceed the width and broke the line, putting the last words
+     * on a second line below the canvas where they could not be seen: the
+     * effect covered part of the headline and stopped. Widely supported, and
+     * harmless where it is not, since the measured width accounts for the
+     * difference either way.
+     */
+    function apply(ctx: CanvasRenderingContext2D) {
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = style.color;
+      ctx.textBaseline = "top";
+      ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} / ${style.lineHeight} ${style.fontFamily}`;
+      if (style.letterSpacing && style.letterSpacing !== "normal") {
+        ctx.letterSpacing = style.letterSpacing;
+      }
+      if (style.wordSpacing && style.wordSpacing !== "normal") {
+        ctx.wordSpacing = style.wordSpacing;
       }
     }
-    if (line) lines.push(line);
 
-    lines.forEach((l, i) => sctx.fillText(l, 0, i * lineHeight));
+    apply(sctx);
 
-    cv.width = W * dpr;
-    cv.height = H * dpr;
-    cv.style.width = `${W}px`;
-    cv.style.height = `${H}px`;
+    const text = el.innerText.trim();
+    const fontSize = parseFloat(style.fontSize);
+    const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.1;
+
+    /**
+     * Break to the same lines the DOM did, or not at all.
+     *
+     * A headline set not to wrap has one line however wide it is, and wrapping
+     * it here invented a second. So the white-space rule decides, rather than
+     * this code assuming all text wraps.
+     */
+    const wraps = !/^(nowrap|pre)$/.test(style.whiteSpace);
+    const lines: string[] = [];
+
+    if (!wraps) {
+      lines.push(text);
+    } else {
+      let line = "";
+      for (const word of text.split(/\s+/)) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (sctx.measureText(candidate).width > W && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) lines.push(line);
+    }
+
+    /**
+     * The canvas is sized to the text, not only to the box it sits in.
+     *
+     * A glyph can sit a fraction outside the width the browser reports, and a
+     * canvas edge is hard where the DOM's is not, so that difference shows up
+     * as a clipped last letter. A pixel of slack costs nothing.
+     */
+    const widest = Math.max(...lines.map((l) => sctx.measureText(l).width));
+    const CW = Math.max(W, Math.ceil(widest) + 1);
+    const CH = Math.max(H, Math.ceil(lines.length * lineHeight));
+
+    // Grown to fit, and the context set again because resizing cleared it.
+    if (CW !== W || CH !== H) {
+      source.width = CW * dpr;
+      source.height = CH * dpr;
+      apply(sctx);
+    }
+
+    // Half-leading. The DOM centres glyphs in the line box, so text drawn from
+    // the box's top edge sits high by half the difference.
+    const halfLeading = Math.max(0, (lineHeight - fontSize) / 2);
+    lines.forEach((l, i) => sctx.fillText(l, 0, i * lineHeight + halfLeading));
+
+    cv.width = CW * dpr;
+    cv.height = CH * dpr;
+    cv.style.width = `${CW}px`;
+    cv.style.height = `${CH}px`;
     const ctx = cv.getContext("2d");
     if (!ctx) return;
 

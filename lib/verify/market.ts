@@ -149,15 +149,7 @@ export async function tokenPools(token: Address): Promise<MarketPool[] | null> {
   return pools.sort((x, y) => (y.liquidityUsd ?? 0) - (x.liquidityUsd ?? 0));
 }
 
-/**
- * Launchpads whose hooks are recognisable by the dex GeckoTerminal files the
- * pool under. Naming the launchpad tells a trader whose fee they are paying.
- */
-export const LAUNCHPAD_DEXES: Record<string, string> = {
-  "pons-v2-dex": "Pons",
-  "bankr-robinhood": "Bankr",
-  "clanker-robinhood": "Clanker",
-  "virtuals-robinhood": "Virtuals",
-  "easya-kickstart-robinhood": "EasyA Kickstart",
-  "mint-club-robinhood": "Mint Club",
-};
+// The table and the naming live in ./venue, which carries no server boundary,
+// so a page or a test can name an exchange without pulling this module in.
+export { LAUNCHPAD_DEXES } from "./venue";
+

@@ -20,8 +20,8 @@ Hood Terminus puts discovery, trading, wallet intelligence and launching on one 
 | Trade | Swaps through Uniswap's UniversalRouter with slippage control, minimum received and price impact shown before you sign. Buying with ETH takes one transaction and one signature, with no token approval. |
 | Portfolio | Holdings and value for a connected wallet. |
 | Alerts | Price alerts on any token, checked while the app is open. |
-| Create | Launch a token with no upfront liquidity. Buyers fund it on a bonding curve, and once it raises 4 ETH it graduates into a Uniswap pool. The creator earns a share of every trade. |
-| Verify | Before you buy, a real buy and sell is simulated through the token's main pool. You see whether selling works, what a round trip costs, who controls the contract, and what the pool's hook can do. |
+| Launch | Create a token with no money of your own. Buyers fund it on a bonding curve, and once it raises 4 ETH it graduates into a Uniswap pool. The creator takes a share of the 1% trade fee while the token is on the curve. |
+| Verify | Travis checks a token before you buy it. He buys about $10 of it and sells it straight back inside a copy of the chain, and tells you whether selling worked, what it cost, who controls the contract and what the pool's own rules allow. Nothing is signed and no money is used. On the token page, in the trade panel, and at `/verify` for an address somebody sent you. |
 
 ## Robinhood Chain integration
 
@@ -35,16 +35,44 @@ The question every trader on a new chain asks first is whether they can sell wha
 
 It injects a small simulator contract into a single `eth_call` using a state override, funds it, buys about $10 of the token through the pool people actually trade in, and sells it straight back. Nothing is signed or broadcast. It then compares what each pool promised with what actually arrived, which is where sell blocks, transfer taxes and hook fees show up.
 
-It works on Uniswap v2 and v3 pools and on v4 pools with hooks, which matters here: on Robinhood Chain most new tokens trade through v4 hooks run by launchpads such as Pons and Bankr. Verify recovers each pool's key from the chain, reads the hook's permissions from its address, and names the launchpad when it recognises one. Pools quoted in USDG or tokenized stocks are funded by overriding the quote asset's storage, with a sell-only fallback when that layout is unknown.
+It works on Uniswap v2 and v3 pools and on v4 pools with hooks, which matters here: on Robinhood Chain most new tokens trade through v4 hooks run by launchpads such as Pons and Bankr. Verify recovers each pool's key from the chain, over the public RPC rather than the configured one, because a free tier that caps `eth_getLogs` at ten blocks cannot find an event on a chain past block 84,000,000; reads the hook's permissions from its address, and names the launchpad when it recognises one. Pools quoted in USDG or tokenized stocks are funded by overriding the quote asset's storage, with a sell-only fallback when that layout is unknown.
 
 Alongside the simulation it reads the token's bytecode for owner powers (minting, blocking wallets, pausing, changing taxes) and proxies, and GeckoTerminal for holder concentration, creator holdings, liquidity and buy and sell counts. A check that cannot run reports **unknown**, never a pass.
 
 The simulator is `contracts/verify/VerifySim.sol`. The engine is `lib/verify/`, served at `GET /api/verify/:address`.
 
+```
+curl https://hood-terminus.vercel.app/api/verify/0xYourTokenAddress
+```
+
+The response is a `VerifyReport` from [`lib/verify/types.ts`](lib/verify/types.ts):
+
+```
+{
+  token:      Address
+  chainId:    number
+  checkedAt:  string
+  name:       string | null
+  symbol:     string | null
+  verdict:    "clear" | "caution" | "danger" | "unknown"
+  headline:   string                     one sentence a trader can act on
+  pool:       VerifiedPool | null        id, kind ("v2" | "v3" | "v4" | "other"),
+                                         dex, name, quoteSymbol, liquidityUsd,
+                                         createdAt, hooks
+  simulation: SimulationSummary | null   tradeUsd, roundTripPct, buyTaxPct,
+                                         sellTaxPct, sellBlocked, sellOnly
+  checks:     Check[]                    id, label,
+                                         status ("pass" | "warn" | "fail" | "unknown"),
+                                         detail
+}
+```
+
+A field is null when the answer is not known, and a check that could not run reports `unknown` rather than passing.
+
 ## Architecture
 
 - **App:** Next.js (App Router), React, TypeScript, Tailwind CSS
-- **Chain access:** viem and wagmi, with Privy for sign-in and embedded wallets
+- **Chain access:** viem and wagmi. You connect a wallet you already have; there is no sign-in
 - **Data:** Supabase Postgres for the pool index, swaps and wallet profit and loss
 - **Indexing:** scripts in `scripts/` and `worker/` index pools, watch swaps and roll up wallet results
 - **Market data:** GeckoTerminal for pool prices and metadata
@@ -60,7 +88,11 @@ cp .env.example .env.local   # then fill in your own values
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3003.
+
+The port is pinned to 3003 in the `dev` script. Next picks the next free port
+when its default is busy, and a port that moves on its own is a source of
+faults that look like code and are not.
 
 ## Hackathon disclosure
 
@@ -70,7 +102,21 @@ Version 1 was built between September 3 and September 11, 2026, before the hacka
 
 ### Built during Crypto World's Fair
 
-- **Verify** (October 2026): pre-trade sell simulation through v2, v3 and v4 pools including launchpad hooks, contract power and proxy checks, and market checks, with an API route and a panel for the token page.
+- **Verify, as an engine** (October 2026): pre-trade sell simulation through v2, v3 and v4 pools including launchpad hooks, contract power and proxy checks, and market checks, with an API route.
+- **Travis** (October 2026): the check made visible and given a name you can change. A panel on every token page, a verdict and a confirm before a risky buy in the trade panel, and `/verify` for an address somebody sent you. Public API at `GET /api/verify/:address`, rate limited and CORS-enabled.
+- **v4 pools made checkable** (October 2026): pool keys are recovered over an endpoint that answers ranged log queries, which is what made most pairs on this chain testable at all.
+- **Resilience and honesty in the data layer** (October 2026): market requests back off and fall back to the last good answer, so a rate limit degrades to slightly old data rather than an empty chart, and a failed load says it failed instead of claiming a pool has no history.
+- **Plain language, and claims checked against the contract** (October 2026): the launchpad no longer promises fees after graduation, which it never paid, and the fee split is read from the chain rather than written down.
+- **Wallets only** (October 2026): the embedded-wallet sign-in was removed after it proved unable to create a wallet on this app, and the terms and privacy notice were rewritten to match.
+- **A session that ends when you leave** (October 2026): a connected wallet lasts for the browser session and no longer, and Disconnect ends every authorised wallet rather than promoting the next one. Neither was a route to spending, since transactions are signed in the wallet; what was exposed was the address and the portfolio behind it to whoever opened the laptop next.
+
+### Next
+
+- **Trading on v4 pools**, so pairs on launchpad hooks can be traded here rather than only checked, with Travis in the same flow.
+- **Creator fees after graduation**, through a v4 hook on the graduated pool. Version two cannot do this: once a token graduates, the fees on its liquidity cannot be collected, which is why the creator's share stops at graduation today.
+- **Travis as a column on the Discover board**, so a verdict sits beside the price rather than one page further in.
+- **Alerts checked on the server** and delivered as browser push, so a price you are waiting for reaches you when the app is closed.
+- **A developer page for `/api/verify`**, since the endpoint is public and currently documented only here.
 
 ## License
 

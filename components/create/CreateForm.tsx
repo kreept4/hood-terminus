@@ -551,8 +551,9 @@ export function CreateForm() {
               className={clsx(INPUT, "tnum")}
             />
             <span className="text-micro text-ink-3">
-              Where your {creatorSharePercent}% of every trade fee accrues. Set
-              once at launch and never changeable afterwards.
+              Where your {creatorSharePercent}% of the 1% trade fee accrues while
+              the token is on the curve. Set once at launch and never changeable
+              afterwards.
             </span>
           </Field>
 
@@ -735,12 +736,12 @@ export function CreateForm() {
               <div className="flex flex-col gap-2">
                 <ConnectWallet
                   className="w-full justify-center py-3"
-                  signInOnly
+
                   label="Sign in"
                 />
                 <ConnectWallet
                   className="w-full justify-center py-3"
-                  walletOnly
+
                   label="Link a wallet"
                 />
               </div>
@@ -829,8 +830,9 @@ export function CreateForm() {
         <Card className="p-5">
           <h2 className="text-lead font-semibold text-ink">Trading fees</h2>
           <p className="mt-2 text-body text-ink-2">
-            Fees from every trade on your token come back to you, claimable here
-            whenever you want them.
+            Your share of the 1% trade fee, earned while the token is on the
+            curve, claimable here whenever you want it. Trades stop paying this
+            once the token graduates into a Uniswap pool.
           </p>
           <dl className="mt-4 flex flex-col gap-3">
             <Row label="Earned so far" value="0 ETH" mono />
@@ -846,39 +848,6 @@ const INPUT =
   "w-full rounded-md border border-line bg-surface-2 px-3 py-2.5 text-body text-ink " +
   "placeholder:text-ink-3 focus:border-green focus:outline-none";
 
-function ModeCard({
-  active,
-  onSelect,
-  title,
-  body,
-}: {
-  active: boolean;
-  onSelect: () => void;
-  title: string;
-  body: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={active}
-      className={clsx(
-        "flex flex-col gap-1.5 rounded-md border p-3.5 text-left transition-colors duration-100",
-        active ? "border-green bg-green-deep" : "border-line hover:bg-surface-2",
-      )}
-    >
-      <span
-        className={clsx(
-          "text-body font-medium",
-          active ? "text-green" : "text-ink",
-        )}
-      >
-        {title}
-      </span>
-      <span className="text-micro leading-relaxed text-ink-2">{body}</span>
-    </button>
-  );
-}
 
 function Field({
   label,

@@ -128,7 +128,7 @@ export function InstallPrompt() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="-mt-1 -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors duration-100 hover:bg-surface-2 hover:text-ink"
+          className="tap-44 -mt-1 -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors duration-100 hover:bg-surface-2 hover:text-ink"
         >
           <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
             <path

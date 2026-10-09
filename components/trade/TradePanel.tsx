@@ -15,7 +15,6 @@ import { TokenLogo } from "@/components/market/TokenLogo";
 import { TokenSelect } from "@/components/trade/TokenSelect";
 import { clsx } from "@/lib/clsx";
 import { robinhoodChain } from "@/lib/chain";
-import { formatUsd } from "@/lib/format";
 import { CONTRACTS } from "@/lib/chain/contracts";
 import {
   applySlippage,
@@ -26,6 +25,12 @@ import {
   UNIVERSAL_ROUTER_ABI,
 } from "@/lib/trade/router";
 import type { Pool } from "@/lib/market/gecko";
+import { useVerify } from "@/components/verify/useVerify";
+import {
+  VerifyBadge,
+  VerifyConfirm,
+  needsConfirm,
+} from "@/components/verify/VerifyBadge";
 
 /**
  * The trade panel.
@@ -65,16 +70,21 @@ type QuoteResponse = {
 export function TradePanel({
   pools,
   logos,
+  selected,
 }: {
   pools: Pool[];
   logos: Record<string, string>;
+  /** A pool named in the link, already checked as routable by the page. */
+  selected?: string;
 }) {
   const { address, isConnected } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
   const publicClient = usePublicClient();
   const [simulating, setSimulating] = useState(false);
 
-  const [poolAddress, setPoolAddress] = useState(pools[0]?.address ?? "");
+  const [poolAddress, setPoolAddress] = useState(
+    selected || pools[0]?.address || "",
+  );
   const [side, setSide] = useState<Side>("buy");
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState(1);
@@ -176,8 +186,34 @@ export function TradePanel({
     [balanceIn, decimalsIn, side],
   );
 
+  // ── Verify ───────────────────────────────────────────────────────────────
+  /**
+   * The verdict for the token being bought, and the gate in front of a bad one.
+   *
+   * Only on a buy. Selling a token Verify dislikes is the thing somebody should
+   * be doing, and stopping to warn them about it would be absurd.
+   */
+  const { data: verifyReport } = useVerify(
+    side === "buy" ? (pool?.baseTokenAddress ?? undefined) : undefined,
+  );
+  const [confirming, setConfirming] = useState(false);
+
   // ── Execution ────────────────────────────────────────────────────────────
-  async function submit() {
+  /**
+   * Checks the verdict, then either asks or proceeds.
+   *
+   * Split from `execute` so "Buy anyway" can call the second half directly
+   * without coming back through the gate it just passed.
+   */
+  function submit() {
+    if (side === "buy" && needsConfirm(verifyReport)) {
+      setConfirming(true);
+      return;
+    }
+    void execute();
+  }
+
+  async function execute() {
     if (!pool || !quote?.quote || !address) return;
     setError(null);
 
@@ -367,7 +403,7 @@ export function TradePanel({
               type="button"
               disabled={!balanceIn}
               onClick={() => setPercent(pct)}
-              className="tnum rounded-md border border-line py-1.5 text-micro text-ink-2 transition-colors duration-100 hover:border-green hover:text-green disabled:opacity-40"
+              className="tnum flex min-h-10 items-center justify-center rounded-md border border-line py-1.5 text-micro text-ink-2 transition-colors duration-100 hover:border-green hover:text-green disabled:opacity-40"
             >
               {pct === 100 ? "Max" : `${pct}%`}
             </button>
@@ -396,6 +432,14 @@ export function TradePanel({
             ))}
           </div>
         </div>
+
+        {/* The verdict, beside the button that acts on it. Buys only: nobody
+            needs warning off selling a token Verify dislikes. */}
+        {side === "buy" && pool?.baseTokenAddress && (
+          <div className="mt-4 border-t border-line-soft pt-4">
+            <VerifyBadge token={pool.baseTokenAddress} />
+          </div>
+        )}
 
         <div className="mt-5">
           {isConnected ? (
@@ -428,12 +472,12 @@ export function TradePanel({
             <div className="flex flex-col gap-2">
               <ConnectWallet
                 className="w-full justify-center py-3"
-                signInOnly
+
                 label="Sign in"
               />
               <ConnectWallet
                 className="w-full justify-center py-3"
-                walletOnly
+
                 label="Link a wallet"
               />
             </div>
@@ -510,6 +554,18 @@ export function TradePanel({
         )}
 
       </Card>
+
+      {confirming && verifyReport && (
+        <VerifyConfirm
+          report={verifyReport}
+          symbol={pool?.symbol ?? "this token"}
+          onCancel={() => setConfirming(false)}
+          onProceed={() => {
+            setConfirming(false);
+            void execute();
+          }}
+        />
+      )}
     </div>
   );
 }

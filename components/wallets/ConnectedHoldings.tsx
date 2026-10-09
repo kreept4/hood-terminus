@@ -21,12 +21,9 @@ export function ConnectedHoldings() {
       <Card className="px-5 py-12">
         <div className="mx-auto flex max-w-sm flex-col items-center gap-5 text-center">
           <p className="text-body text-ink-2">
-            Sign in to see what your wallet holds on Robinhood Chain.
+            Connect a wallet to see what it holds on Robinhood Chain.
           </p>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <ConnectWallet signInOnly label="Sign in" />
-            <ConnectWallet walletOnly label="Link a wallet" />
-          </div>
+          <ConnectWallet label="Connect a wallet" />
         </div>
       </Card>
     );

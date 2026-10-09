@@ -106,14 +106,6 @@ export function Footer() {
         </div>
       </div>
 
-      {/* relative and filled: whatever the marquee's crop does at a given
-          viewport, the line under it is painted on top rather than beneath. */}
-      <div className="gutter relative z-10 flex flex-wrap items-center justify-between gap-4 border-t border-line-soft bg-surface py-5">
-        <p className="text-micro text-ink-3">
-          Public chain data. Not financial advice. Rankings describe past
-          trades, nothing more.
-        </p>
-      </div>
       </footer>
     </FooterGlide>
   );

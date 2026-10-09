@@ -46,24 +46,6 @@ const CONNECT_SRC = [
   "wss://*.walletconnect.org",
   // Coinbase Wallet SDK.
   "https://*.coinbase.com",
-  /**
-   * Privy. Its SDK fetches app config from `auth.privy.io` the moment it
-   * initialises, and without this the fetch is refused, `ready` never turns
-   * true, and every sign-in button silently does nothing. There is no error on
-   * screen and nothing Privy can log, because the request never leaves the
-   * page: the only trace is a CSP violation in the console.
-   *
-   * `privy.systems` carries the embedded wallet's own iframe origin, which is
-   * separate from the auth host.
-   */
-  "https://auth.privy.io",
-  "https://*.privy.io",
-  "https://*.privy.systems",
-  // Telegram's login widget talks back to its own origin. It was allowed to
-  // render and to load its script, but not to speak, which is a blocked login
-  // that looks like a dead button.
-  "https://oauth.telegram.org",
-  "https://telegram.org",
   // Supabase storage, which is where uploaded token artwork now lives. Already
   // covered by the Supabase wildcard above, listed here so it is not removed
   // by accident later.
@@ -71,69 +53,24 @@ const CONNECT_SRC = [
 
 const CSP = [
   "default-src 'self'",
-  /**
-   * See the note above: relaxed on purpose, for wallet extensions.
-   *
-   * `challenges.cloudflare.com` is here for Privy, and it is what makes X
-   * sign-in work on a desktop. Privy gates social login behind an invisible
-   * Cloudflare Turnstile challenge, which it runs by injecting
-   * `challenges.cloudflare.com/turnstile/v0/api.js` into this page before it
-   * opens the OAuth popup. With the host missing from `script-src` that script
-   * is refused, the challenge never resolves, the popup never opens, and
-   * "Continue with X" does nothing at all with no error on screen.
-   *
-   * It only bit desktop. On a phone the same sign-in is a full-page redirect to
-   * `auth.privy.io`, where the challenge runs on Privy's own origin under
-   * Privy's CSP rather than this one, so it was never blocked there. Required
-   * in `frame-src` too, below, for the widget's own iframe.
-   *
-   * `auth.privy.io` is here for the same family of reasons, and it is what
-   * brings Telegram back. Privy injects scripts from its own origin into this
-   * page, and Telegram's login is one of them: it loads
-   * `auth.privy.io/js/telegram-login.js`. With the host absent this was refused
-   * before the widget could render, which is the real reason Telegram sign-in
-   * did nothing. It was read at the time as Telegram rejecting the
-   * `auth.privy.io` origin; it was this CSP refusing Privy's own script, the
-   * same shape of failure as X. Telegram's own origins stay in `connect-src`
-   * and `frame-src` below for the widget's iframe and its callback.
-   */
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://challenges.cloudflare.com https://auth.privy.io",
+  // Relaxed on purpose, for wallet extensions: they inject their provider
+  // into the page, and a strict policy here blocks the wallets this product
+  // now depends on entirely.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   // data: for wallet icons, https: for token artwork from CoinGecko.
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src ${CONNECT_SRC}`,
   /**
-   * Privy renders its login modal and the embedded wallet in iframes, and
-   * Telegram's login widget is an iframe on `oauth.telegram.org`. A blocked
-   * frame fails the same silent way a blocked fetch does.
+   * WalletConnect frames its own surfaces. A blocked frame fails the same
+   * silent way a blocked fetch does, which is why this is listed rather than
+   * left to `default-src`.
    */
   [
     "frame-src 'self'",
     "https://*.walletconnect.com",
     "https://*.walletconnect.org",
-    "https://auth.privy.io",
-    "https://*.privy.io",
-    "https://*.privy.systems",
-    // The other half of the Turnstile fix noted on `script-src`: the challenge
-    // renders its own iframe from this host, so blocking it here fails the
-    // sign-in the same silent way blocking the script did.
-    "https://challenges.cloudflare.com",
-    "https://oauth.telegram.org",
-    /**
-     * X, because desktop and mobile take different routes through OAuth.
-     *
-     * On a phone Privy redirects the whole page, which this directive does not
-     * govern, so X sign-in worked there. On desktop the provider is opened
-     * inside Privy's own frame, and `frame-src` decides whether that frame may
-     * navigate to x.com. It could not, so the flow died silently after the
-     * user had already approved on X: the approval succeeded and the return
-     * trip was refused.
-     *
-     * Both hostnames, because X still serves and redirects between them.
-     */
-    "https://x.com",
-    "https://twitter.com",
   ].join(" "),
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -141,17 +78,11 @@ const CSP = [
   /**
    * Where a form on this page may post.
    *
-   * `'self'` alone breaks OAuth: the sign-in flow posts to the provider, and a
-   * refused form submission looks identical to a provider that rejected you.
-   * Only the identity hosts are added, so this still stops the page's own
-   * forms being aimed anywhere else.
+   * Nothing but this origin. The identity hosts that used to be listed here
+   * were for Privy's OAuth, which posted the sign-in form to the provider.
    */
   [
     "form-action 'self'",
-    "https://auth.privy.io",
-    "https://x.com",
-    "https://twitter.com",
-    "https://oauth.telegram.org",
   ].join(" "),
   "frame-ancestors 'none'",
   "upgrade-insecure-requests",
@@ -185,8 +116,21 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // The API is same-origin only. No CORS headers means no cross-origin
-        // browser can read these, which matters for the expensive ones.
+        /**
+         * The API is same-origin by default, with one stated exception.
+         *
+         * Sending no CORS headers is what keeps a cross-origin page from
+         * reading these, which matters for the expensive ones. `/api/verify/*`
+         * opts out and sets its own, because Verify is the piece of this
+         * product worth other people building on and a check nobody else can
+         * call is a check nobody else can use. That route is public chain data
+         * with no session behind it, so there is nothing for a hostile page to
+         * ride, and it carries its own rate limit.
+         *
+         * `Cache-Control: no-store` here is a default, not a ceiling: a route
+         * that sets its own in the response wins, which is how Verify keeps its
+         * sixty-second edge cache.
+         */
         source: "/api/:path*",
         headers: [
           { key: "X-Robots-Tag", value: "noindex" },

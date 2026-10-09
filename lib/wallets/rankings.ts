@@ -193,6 +193,79 @@ export type WalletPnl = {
 export type PnlSort = "realised" | "winRate" | "activity";
 
 /**
+ * One `wallet_pnl` row, mapped.
+ *
+ * Shared so a single wallet's page and the board cannot disagree about what a
+ * win rate is. They did: the page carried its own "not computed" placeholders
+ * while the board had the figures all along.
+ */
+function toWalletPnl(r: {
+  wallet_address: string;
+  wins: number;
+  losses: number;
+  win_rate_pct: number | string;
+  realised_quote: number | string;
+  trade_count: number;
+  pool_count: number;
+  best_pct: number | string | null;
+  worst_pct: number | string | null;
+  window_start: string | null;
+  window_end: string | null;
+}): WalletPnl {
+  const closed = r.wins + r.losses;
+  const avg = closed > 0 ? Number(r.realised_quote) / closed : 0;
+  return {
+    walletAddress: r.wallet_address,
+    wins: r.wins,
+    losses: r.losses,
+    winRatePct: Number(r.win_rate_pct),
+    realisedEth: Number(r.realised_quote),
+    tradeCount: r.trade_count,
+    poolCount: r.pool_count,
+    bestPct: r.best_pct === null ? null : Number(r.best_pct),
+    worstPct: r.worst_pct === null ? null : Number(r.worst_pct),
+    windowStart: r.window_start,
+    windowEnd: r.window_end,
+    avgPerPosition: avg,
+    likelyBot:
+      // Arbitrage: near-perfect, many positions, each worth nothing.
+      (Number(r.win_rate_pct) >= 90 && closed >= 20 && Math.abs(avg) < 0.002) ||
+      // Market making and sniping: enormous trade counts against very few
+      // closed positions. A person cannot place four hundred trades and
+      // close eight of them.
+      (r.trade_count >= 200 && r.trade_count > closed * 15) ||
+      // Spread across more markets than anyone reads in a week.
+      r.pool_count >= 60,
+  };
+}
+
+/**
+ * One wallet's scored record, for its own page.
+ *
+ * Unlike `getWalletPnl` this applies no minimum and no bot exclusion. Those
+ * filters exist to keep the board worth reading; on a page someone navigated to
+ * deliberately, withholding the numbers would just look broken. `likelyBot`
+ * still comes back so the page can say so.
+ */
+export async function getWalletPnlFor(address: string): Promise<WalletPnl | null> {
+  const supabase = client();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("wallet_pnl")
+    .select("*")
+    .eq("wallet_address", address.toLowerCase())
+    .maybeSingle();
+
+  if (error) {
+    console.error("[wallets] getWalletPnlFor error:", error.message);
+    return null;
+  }
+
+  return data ? toWalletPnl(data) : null;
+}
+
+/**
  * Scored wallets, for the copy-trading board.
  *
  * Defaults to realised profit rather than win rate on purpose. Win rate alone
@@ -233,33 +306,7 @@ export async function getWalletPnl({
     return [];
   }
 
-  const rows = (data ?? []).map((r) => {
-    const closed = r.wins + r.losses;
-    const avg = closed > 0 ? Number(r.realised_quote) / closed : 0;
-    return {
-      walletAddress: r.wallet_address,
-      wins: r.wins,
-      losses: r.losses,
-      winRatePct: Number(r.win_rate_pct),
-      realisedEth: Number(r.realised_quote),
-      tradeCount: r.trade_count,
-      poolCount: r.pool_count,
-      bestPct: r.best_pct === null ? null : Number(r.best_pct),
-      worstPct: r.worst_pct === null ? null : Number(r.worst_pct),
-      windowStart: r.window_start,
-      windowEnd: r.window_end,
-      avgPerPosition: avg,
-      likelyBot:
-        // Arbitrage: near-perfect, many positions, each worth nothing.
-        (r.win_rate_pct >= 90 && closed >= 20 && Math.abs(avg) < 0.002) ||
-        // Market making and sniping: enormous trade counts against very few
-        // closed positions. A person cannot place four hundred trades and
-        // close eight of them.
-        (r.trade_count >= 200 && r.trade_count > closed * 15) ||
-        // Spread across more markets than anyone reads in a week.
-        r.pool_count >= 60,
-    };
-  });
+  const rows = (data ?? []).map(toWalletPnl);
 
   return rows
     .filter((r) => r.wins + r.losses >= minClosed)

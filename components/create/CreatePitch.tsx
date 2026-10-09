@@ -30,11 +30,20 @@ const STEPS = [
   },
   {
     title: "Open it",
-    body: "Buyers fund it. At four ETH it gets a real pool.",
+    body: "Buyers fund it as they buy. At four ETH it opens as a normal market.",
   },
   {
     title: "Earn from it",
-    body: "You earn a fee on every trade, for as long as it trades.",
+        /**
+     * "for as long as it trades" was false.
+     *
+     * The launchpad splits a 1% trade fee with the creator while the token is
+     * on the bonding curve. At four ETH it graduates into a Uniswap pool, the
+     * curve stops being the venue, and the contract stops paying the creator.
+     * Promising earnings that end at graduation is the one claim on this page
+     * somebody could lose money believing.
+     */
+    body: "You take a share of the 1% fee on every trade, until it opens as a normal market.",
   },
 ];
 
@@ -47,11 +56,12 @@ export function CreatePitch() {
             {/* ── The claim ───────────────────────────────────────── */}
             <div className="flex flex-col justify-center lg:col-span-5">
               <h2 className="text-h1 leading-none font-bold tracking-tight text-ink">
-                Launch a token and earn the fees
+                Launch a token and earn from every trade
               </h2>
               <p className="mt-4 text-lead text-ink-2">
-                Live in under a minute. Nothing up front, and you keep the
-                fees.
+                Live in under a minute. You put in no money of your own, and
+                you take a share of every trade until it opens as a normal
+                market.
               </p>
 
               <dl className="mt-8 flex flex-col divide-y divide-line-soft border-t border-line-soft">

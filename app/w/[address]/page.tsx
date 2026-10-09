@@ -6,7 +6,12 @@ import { CopyAddress } from "@/components/wallet/CopyAddress";
 import { HoldingsPanel } from "@/components/wallets/HoldingsPanel";
 import { TrackButton } from "@/components/wallets/WalletTracker";
 import { robinhoodChain } from "@/lib/chain";
-import { getWalletRanking, getWalletRecentSwaps } from "@/lib/wallets/rankings";
+import {
+  getWalletPnlFor,
+  getWalletRanking,
+  getWalletRecentSwaps,
+} from "@/lib/wallets/rankings";
+import { Profit } from "@/components/wallets/PnlBoard";
 import { IconExternal } from "@/components/shell/NavIcons";
 import { formatAge, formatCount, truncateAddress, NO_VALUE } from "@/lib/format";
 
@@ -21,9 +26,10 @@ export async function generateMetadata({ params }: Params) {
 
 export default async function WalletPage({ params }: Params) {
   const { address } = await params;
-  const [ranking, swaps] = await Promise.all([
+  const [ranking, swaps, pnl] = await Promise.all([
     getWalletRanking(address),
     getWalletRecentSwaps(address, 40),
+    getWalletPnlFor(address),
   ]);
 
   const explorer = robinhoodChain.blockExplorers.default.url;
@@ -51,7 +57,7 @@ export default async function WalletPage({ params }: Params) {
               rel="noopener noreferrer"
               aria-label="View on the block explorer"
               title="View on the block explorer"
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-2 transition-colors duration-100 hover:border-green hover:text-green"
+              className="tap-44 flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-2 transition-colors duration-100 hover:border-green hover:text-green"
             >
               <IconExternal />
             </a>
@@ -89,17 +95,54 @@ export default async function WalletPage({ params }: Params) {
             label="Last block"
             value={ranking?.lastActiveBlock?.toLocaleString() ?? NO_VALUE}
           />
-          <Stat label="Realised profit" value={NO_VALUE} hint="Not computed" />
-          <Stat label="Win rate" value={NO_VALUE} hint="Not computed" />
+          <Stat
+            label="Realised profit, 7d"
+            value={pnl ? <Profit eth={pnl.realisedEth} /> : NO_VALUE}
+            hint={pnl ? undefined : "No closed positions indexed"}
+          />
+          <Stat
+            label="Win rate"
+            value={pnl ? `${pnl.winRatePct.toFixed(0)}%` : NO_VALUE}
+            hint={pnl ? `${pnl.wins}W / ${pnl.losses}L` : undefined}
+          />
+          <Stat
+            label="Best position"
+            value={
+              pnl?.bestPct === null || pnl === null
+                ? NO_VALUE
+                : `+${pnl.bestPct.toFixed(0)}%`
+            }
+          />
+          <Stat
+            label="Worst position"
+            value={
+              pnl?.worstPct === null || pnl === null
+                ? NO_VALUE
+                : `${pnl.worstPct.toFixed(0)}%`
+            }
+          />
         </StatRow>
       </Card>
 
-      {/* The two figures anyone actually wants are the two we cannot compute
-          yet. Leaving them blank with a short reason is the only honest option:
-          inventing a win rate out of trade counts would be a number a reader
-          acts on with money. */}
-      <p className="mt-3 text-micro text-ink-3">
-        Profit and win rate are not live yet. This page shows activity.
+      {/* Said once, under the figures, rather than on every stat. The window and
+          the matching rule are what make the profit number mean anything. */}
+      <p className="mt-3 max-w-2xl text-micro text-ink-3">
+        {pnl ? (
+          <>
+            Closed positions only, matched first in first out, over the last
+            seven days of indexed trades. Profit is in ETH and covers markets
+            quoted against ETH.
+            {pnl.likelyBot && (
+              <> This wallet trades like a bot, so it is kept off the board.</>
+            )}
+          </>
+        ) : (
+          <>
+            No closed positions for this wallet in the last seven days of
+            indexed trades, so there is no profit or win rate to show. Activity
+            below is still live.
+          </>
+        )}
       </p>
 
       <div className="mt-8">

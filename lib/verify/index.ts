@@ -3,7 +3,15 @@ import { getAddress, type Address, type Hex } from "viem";
 import { robinhoodChain } from "@/lib/chain";
 import { readContractFacts, type ContractFacts } from "./contract";
 import { tokenInfo, tokenPools, type MarketPool, type TokenInfo } from "./market";
-import { hookProfile, poolKind, v4PoolKey, type HookProfile, type PoolKey } from "./pool";
+import {
+  deepestPoolOnChain,
+  hookProfile,
+  poolKind,
+  v4PoolKey,
+  type HookProfile,
+  type PoolKey,
+} from "./pool";
+import { CONTRACTS } from "@/lib/chain/contracts";
 import { buildChecks, headlineOf, verdictOf } from "./score";
 import { simulateRoundTrip, type SimulationOutcome } from "./simulate";
 import type { PoolKind, VerifyReport } from "./types";
@@ -68,27 +76,61 @@ async function run(token: Address): Promise<{ report: VerifyReport; complete: bo
   let hook: HookProfile | null = null;
   let sim: SimulationOutcome | null = null;
 
-  if (pool && facts?.isContract) {
-    kind = (await attempt(() => poolKind(pool.id))) ?? "other";
+  /**
+   * The pool to test against, from the chain when the data provider has nothing.
+   *
+   * Verify only ever found pools through GeckoTerminal, so a failed or
+   * uncovered request meant no simulation and a verdict of Unknown reading
+   * "market data is unavailable". It said that about USDG against WETH, one of
+   * the busiest pairs on this chain, which is the clearest possible sign the
+   * check was measuring somebody else's uptime rather than the token.
+   *
+   * The factory knows where the pool is without being asked nicely. Falling
+   * back to it keeps the one check people come here for working when the market
+   * feed is down, which is also exactly when a new token is least documented
+   * and most worth checking.
+   */
+  const onChainPool =
+    !pool && facts?.isContract
+      ? await attempt(() =>
+          deepestPoolOnChain(token, [CONTRACTS.weth as Address]),
+        )
+      : null;
+
+  const poolId = pool?.id ?? onChainPool ?? null;
+
+  if (poolId && facts?.isContract) {
+    kind = (await attempt(() => poolKind(poolId))) ?? "other";
     if (kind === "v4") {
-      poolKey = await attempt(() => v4PoolKey(pool.id as Hex, pool.createdAt));
+      poolKey = await attempt(() => v4PoolKey(poolId as Hex, pool?.createdAt ?? null));
       if (poolKey) hook = hookProfile(poolKey);
     }
     sim = await attempt(() =>
       simulateRoundTrip({
         token,
         kind,
-        poolId: pool.id,
+        poolId,
         key: poolKey,
-        dex: pool.dex,
-        liquidityUsd: pool.liquidityUsd,
-        quotePriceUsd: pool.quotePriceUsd,
-        tokenPriceUsd: pool.tokenPriceUsd,
+        // Everything below this line is market data decorating the result. It
+        // is absent on the fallback, and the simulation does not need it: the
+        // pool's own contracts carry the tokens and the reserves.
+        dex: pool?.dex ?? "uniswap_v3",
+        liquidityUsd: pool?.liquidityUsd ?? null,
+        quotePriceUsd: pool?.quotePriceUsd ?? null,
+        tokenPriceUsd: pool?.tokenPriceUsd ?? null,
       }),
     );
   }
 
-  const checks = buildChecks({ info, pool, marketUnavailable, facts, hook, sim });
+  const checks = buildChecks({
+    info,
+    pool,
+    poolFound: Boolean(poolId),
+    marketUnavailable,
+    facts,
+    hook,
+    sim,
+  });
   const verdict = verdictOf(checks);
 
   const report: VerifyReport = {

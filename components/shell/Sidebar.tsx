@@ -14,10 +14,10 @@ import Dock from "@/components/shell/Dock";
 import {
   IconTokens,
   IconTrack,
-  IconWallet,
-  IconPortfolio,
-  IconAlerts,
+  IconVerify,
+  IconWallet,  IconAlerts,
   IconTrade,
+  IconSettings,
 } from "@/components/shell/NavIcons";
 
 /**
@@ -37,6 +37,15 @@ type Item = {
   href: string;
   label: string;
   Icon: (props: { className?: string }) => React.ReactElement;
+  /**
+   * Carries the brand colour at rest.
+   *
+   * Launching is how this product earns, and in a rail of seven identical grey
+   * rows it read as the seventh most important thing here. The accent button is
+   * spoken for by Verify, so this is the quieter version of the same signal: a
+   * tint rather than a fill, enough to find without competing.
+   */
+  tint?: boolean;
 };
 
 /**
@@ -48,8 +57,14 @@ type Item = {
  * somebody else. An ungrouped rail made "Trending" and "Portfolio" look like
  * the same kind of thing, which they are not.
  *
- * The group headings only exist when the rail is expanded. Collapsed, the
- * dividers between groups carry the same information without the words.
+ * The groups are drawn with dividers and nothing else. They used to carry
+ * headings when the rail was expanded, which was three words labelling three
+ * or four self-evident items: nobody needed telling that Tokens and Verify
+ * are about the market. The rule the collapsed rail already followed, that
+ * the divider is the grouping, turned out to be the right one at both widths.
+ *
+ * `heading` stays because it keys the group and names it in the code. It is
+ * no longer rendered.
  */
 type Group = { heading: string; items: readonly Item[] };
 
@@ -58,33 +73,35 @@ const GROUPS: readonly Group[] = [
     heading: "Market",
     items: [
       { href: "/", label: "Tokens", Icon: IconTokens },
-      /* New pairs and Trending used to be here. They are tabs on the Tokens
-         board now, so having them in the nav as well gave two controls for one
-         choice, in two places, that could disagree about which was selected.
-         One market, one set of tabs. */
+      /* Verify sits in the market group, not under "You", because checking a
+         token is part of reading the market rather than something you do to
+         your own account. */
+      { href: "/verify", label: "Verify", Icon: IconVerify },
+      { href: "/wallets", label: "Track wallets", Icon: IconTrack },
     ],
   },
   {
     heading: "You",
     items: [
-      { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
       { href: "/trade", label: "Trade", Icon: IconTrade },
+      { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
       { href: "/alerts", label: "Alerts", Icon: IconAlerts },
+      { href: "/settings", label: "Settings", Icon: IconSettings },
     ],
   },
   {
-    heading: "Watching",
-    items: [{ href: "/wallets", label: "Track wallets", Icon: IconTrack }],
+    heading: "Launch",
+    items: [{ href: "/create", label: "Launch", Icon: IconPlus, tint: true }],
   },
 ];
 
-/** The dock carries five, and creating a token is the middle one. */
+/** The dock carries five, and the accented middle one is Verify. */
 const TABS: readonly (Item & { accent?: boolean })[] = [
   { href: "/", label: "Markets", Icon: IconTokens },
-  { href: "/wallets", label: "Track wallets", Icon: IconTrack },
-  { href: "/create", label: "Create", Icon: IconPlus, accent: true },
+  { href: "/wallets", label: "Wallets", Icon: IconTrack },
+  { href: "/verify", label: "Verify", Icon: IconVerify, accent: true },
   { href: "/portfolio", label: "Portfolio", Icon: IconWallet },
-  { href: "/alerts", label: "Alerts", Icon: IconAlerts },
+  { href: "/create", label: "Launch", Icon: IconPlus },
 ];
 
 /**
@@ -173,13 +190,21 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Hidden on the create page itself. Asking someone to go somewhere
-            they already are is the most redundant button a rail can carry. */}
-        {pathname !== "/create" && (
+        {/* The one thing wearing the accent.
+            
+            It used to be "Create a token". Launching is the business model and
+            checking a token is the product: far more people arrive holding an
+            address somebody sent them than arrive wanting to mint one, and the
+            accent belongs on the thing most visitors came to do.
+            
+            Hidden on the page it leads to, because asking someone to go
+            somewhere they already are is the most redundant button a rail can
+            carry. */}
+        {pathname !== "/verify" && (
         <div className={collapsed ? "px-2 pt-8" : "px-3 pt-8"}>
           <Link
-            href="/create"
-            title={collapsed ? "Create a token" : undefined}
+            href="/verify"
+            title={collapsed ? "Verify a token" : undefined}
             className={clsx(
               "flex items-center justify-center gap-2 rounded-md bg-green",
               "text-body font-semibold text-on-accent",
@@ -187,8 +212,8 @@ export function Sidebar() {
               collapsed ? "h-11 w-full" : "px-4 py-2.5",
             )}
           >
-            <Plus />
-            {!collapsed && "Create a token"}
+            <IconVerify />
+            {!collapsed && "Verify a token"}
           </Link>
         </div>
         )}
@@ -206,11 +231,6 @@ export function Sidebar() {
                 i > 0 && "mt-5 border-t border-line-soft pt-5",
               )}
             >
-              {!collapsed && (
-                <p className="mb-2 px-3 text-micro text-ink-3">
-                  {group.heading}
-                </p>
-              )}
               <Group
                 items={group.items}
                 pathname={pathname}
@@ -224,7 +244,7 @@ export function Sidebar() {
             they sat alone at the bottom of a tall empty column. */}
         {!collapsed && (
           <div className="mt-6 border-t border-line-soft px-3 pt-4">
-            <ConnectWallet className="w-full justify-center" signInOnly />
+            <ConnectWallet className="w-full justify-center" />
           </div>
         )}
 
@@ -284,7 +304,7 @@ function Group({
 
   return (
     <div className="flex flex-col gap-0.5">
-      {items.map(({ href, label, Icon }) => {
+      {items.map(({ href, label, Icon, tint }) => {
         const active = isActive(pathname, href);
         const badge = href === "/alerts" ? alertCount : 0;
         return (
@@ -298,7 +318,9 @@ function Group({
               collapsed ? "h-10 justify-center" : "gap-3 px-3 py-2",
               active
                 ? "bg-surface-2 font-medium text-ink"
-                : "text-ink-2 hover:text-ink",
+                : tint
+                  ? "border border-green-line bg-green-deep text-green hover:text-green"
+                  : "text-ink-2 hover:text-ink",
             )}
           >
             {/* Fades up behind the label rather than around it, so nothing
@@ -455,7 +477,7 @@ function MobileHeader() {
           in from the chrome and no way to reach Disconnect at all. It is the
           same control the rail uses, in the same sign-in-only mode. */}
       <div className="ml-auto">
-        <ConnectWallet signInOnly />
+        <ConnectWallet />
       </div>
     </header>
   );

@@ -3,17 +3,19 @@ import type { CheckStatus, Verdict } from "@/lib/verify/types";
 /**
  * Colour for Verify's states.
  *
- * Unknown is deliberately not green. A check that could not run must never
- * read as a pass at a glance, so it gets the neutral treatment and the word
- * UNKNOWN. Warn uses amber; the design tokens have no amber yet, so it falls
- * back to a literal until design/tokens.py grows one as --c-amber.
+ * Four states, four treatments, and none of them borrows another's. Unknown is
+ * deliberately not green: a check that could not run must never read as a pass
+ * at a glance, so it stays neutral and says the word. Warn is amber, which now
+ * comes from the palette rather than from a literal.
+ *
+ * `design/tokens.py` grew the ramp with the same WCAG assertions the other
+ * ramps carry, so these are checked rather than chosen: amber reads 10.85 to 1
+ * on the page ground and 8.16 to 1 on its own fill.
  */
-
-const AMBER = "text-[var(--c-amber,#d9a441)] border-[var(--c-amber-line,#6b5320)] bg-[var(--c-amber-deep,#2a2110)]";
 
 export const STATUS_TONE: Record<CheckStatus, string> = {
   pass: "text-green border-green-line bg-green-deep",
-  warn: AMBER,
+  warn: "text-amber border-amber-line bg-amber-deep",
   fail: "text-red border-red-line bg-red-deep",
   unknown: "text-ink-2 border-line bg-surface-2",
 };

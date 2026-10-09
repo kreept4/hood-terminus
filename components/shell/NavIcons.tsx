@@ -118,6 +118,22 @@ export function IconExternal({ className }: IconProps) {
 }
 
 /** Track wallets: a reticle. Watching a specific thing, not browsing. */
+/**
+ * Verify: a shield with a tick.
+ *
+ * The one mark in this set that names a guarantee rather than a place. A shield
+ * alone reads as settings on half the apps that use it, and the tick is what
+ * makes it a verdict.
+ */
+export function IconVerify({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M8 1.2 2.6 3.4v4.1c0 3.2 2.2 6 5.4 7.3 3.2-1.3 5.4-4.1 5.4-7.3V3.4z" />
+      <path d="M5.9 7.9 7.4 9.4l2.9-3" />
+    </Svg>
+  );
+}
+
 export function IconTrack({ className }: IconProps) {
   return (
     <Svg className={className}>
@@ -125,5 +141,16 @@ export function IconTrack({ className }: IconProps) {
       <circle cx="8" cy="8" r="1.6" />
       <path d="M8 1v1.6M8 13.4V15M15 8h-1.6M2.6 8H1" />
     </Svg>
+  );
+}
+
+/** Settings: sliders, because these are levels rather than switches. */
+export function IconSettings({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </svg>
   );
 }

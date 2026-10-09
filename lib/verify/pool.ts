@@ -1,6 +1,7 @@
 import "server-only";
 import { parseAbi, parseAbiItem, type Address, type Hex } from "viem";
-import { verifyClient, V4_POOL_MANAGER } from "./client";
+import { verifyClient, verifyLogClient, V4_POOL_MANAGER } from "./client";
+import { CONTRACTS } from "@/lib/chain/contracts";
 import type { PoolKind } from "./types";
 
 /**
@@ -45,7 +46,9 @@ export async function v4PoolKey(id: Hex, createdAt: string | null): Promise<Pool
   const cached = keyCache.get(id);
   if (cached) return cached;
 
-  const client = verifyClient();
+  // Logs only. See `verifyLogClient`: the configured RPC refuses ranged log
+  // queries, which is what made every v4 pool unverifiable.
+  const client = verifyLogClient();
   const head = await client.getBlock();
   const windows: [bigint, bigint][] = [];
 
@@ -133,3 +136,79 @@ export function hookProfile(key: PoolKey): HookProfile {
     dynamicFee: key.fee === DYNAMIC_FEE_FLAG,
   };
 }
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+const FACTORY = parseAbi([
+  "function getPool(address,address,uint24) view returns (address)",
+]);
+
+const BALANCE = parseAbi(["function balanceOf(address) view returns (uint256)"]);
+
+/** Uniswap v3's standard fee tiers, in hundredths of a basis point. */
+const FEE_TIERS = [100, 500, 3000, 10_000] as const;
+
+/**
+ * The token's deepest pool, found on the chain instead of from a data provider.
+ *
+ * Verify used to locate the pool only through GeckoTerminal, which made the
+ * whole feature a passenger of somebody else's uptime and coverage. When that
+ * request failed the verdict was Unknown with "market data is unavailable",
+ * and it said that about USDG against WETH, which is one of the most heavily
+ * traded pairs on this chain. A tool that cannot check the obvious pairs is not
+ * checking anything.
+ *
+ * The factory already knows. `getPool(token, quote, fee)` is a view call that
+ * returns the pool for a pairing, so the set of candidates is four fee tiers
+ * against each quote asset, and the right answer is whichever holds the most of
+ * the quote. That is also the pool a real sell would route through, which is
+ * the question Verify exists to answer.
+ *
+ * Used as a fallback rather than a replacement: when market data is available
+ * it carries volume and price, which this cannot, and those feed other checks.
+ */
+export async function deepestPoolOnChain(
+  token: Address,
+  quotes: readonly Address[],
+): Promise<Address | null> {
+  const client = verifyClient();
+
+  const candidates = quotes.flatMap((quote) =>
+    FEE_TIERS.map((fee) => ({ quote, fee })),
+  );
+
+  const found = await Promise.all(
+    candidates.map(async ({ quote, fee }) => {
+      try {
+        const pool = await client.readContract({
+          address: CONTRACTS.v3Factory as Address,
+          abi: FACTORY,
+          functionName: "getPool",
+          args: [token, quote, fee],
+        });
+        if (!pool || pool === ZERO_ADDRESS) return null;
+
+        // Depth decides, because a pool that exists and holds nothing routes
+        // nothing. Measured in the quote asset so tiers are comparable.
+        const held = await client.readContract({
+          address: quote,
+          abi: BALANCE,
+          functionName: "balanceOf",
+          args: [pool],
+        });
+        return held > 0n ? { pool, held } : null;
+      } catch {
+        // One refused call should not lose the other seven.
+        return null;
+      }
+    }),
+  );
+
+  const best = found
+    .filter((x): x is { pool: Address; held: bigint } => x !== null)
+    .sort((a, b) => (b.held > a.held ? 1 : b.held < a.held ? -1 : 0))[0];
+
+  return best?.pool ?? null;
+}
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;

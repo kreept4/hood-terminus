@@ -1,4 +1,9 @@
+import { headers } from "next/headers";
+import { cookieToInitialState } from "wagmi";
+import { Analytics } from "@vercel/analytics/next";
 import { Web3Providers } from "@/components/providers/Web3Providers";
+import { SessionGuard } from "@/components/providers/SessionGuard";
+import { wagmiConfig } from "@/lib/wagmi";
 import { NetworkGuard } from "@/components/wallet/NetworkGuard";
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
@@ -70,11 +75,35 @@ export const viewport: Viewport = {
    */
   viewportFit: "cover",
 };
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  /**
+   * The wallet connection, recovered from the cookie before the first paint.
+   *
+   * wagmi is configured with `ssr: true` and `cookieStorage`, and that pairing
+   * only completes if the server reads the cookie and hands the state to the
+   * provider. Without this the client began every navigation with no state and
+   * reconnected after mount, so a connected wallet rendered as disconnected on
+   * the first paint of every page.
+   */
+  const initialState = cookieToInitialState(
+    wagmiConfig,
+    (await headers()).get("cookie"),
+  );
+
   return (
     <html
       lang="en"
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
+      /* The loader script below adds `ht-loaded` to this element before React
+         hydrates, which is the point of it: a session that has already seen the
+         loader must not paint it again, and waiting for React would be too
+         late. React then finds a class on `html` that it did not render and
+         reports a hydration mismatch.
+
+         This is what the attribute is for, and it is narrow: it covers this
+         element's own attributes and nothing inside it, so a real mismatch
+         anywhere in the tree is still reported. */
+      suppressHydrationWarning
     >
       <head>
         {/* Runs before first paint, so a session that has already seen the
@@ -83,7 +112,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full">
         <PageLoader />
-        <Web3Providers>
+        <Web3Providers initialState={initialState}>
+          {/* Inside the provider, because it reads and ends the connection. */}
+          <SessionGuard />
           <SidebarProvider>
             <Sidebar />
             {/* The rail is fixed, so the content column is inset rather than
@@ -98,6 +129,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <InstallPrompt />
           </SidebarProvider>
         </Web3Providers>
+        {/* Page views and nothing else.
+            
+            Vercel Analytics sets no cookie and builds no cross-site profile,
+            which is why the privacy notice can still say there is nothing to
+            consent to and the site can still carry no cookie banner. It has to
+            stay that way: if this is ever swapped for something that follows
+            people between sites, clause 5 of that notice stops being true. */}
+        <Analytics />
       </body>
     </html>
   );
