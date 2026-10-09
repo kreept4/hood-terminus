@@ -9,6 +9,7 @@ import { Card } from "@/components/primitives/Card";
 import { Delta } from "@/components/primitives/Delta";
 import { Stat, StatRow } from "@/components/primitives/Stat";
 import { CopyAddress } from "@/components/wallet/CopyAddress";
+import { VerifyPanel } from "@/components/verify/VerifyPanel";
 import { IconExternal } from "@/components/shell/NavIcons";
 import { TokenLogo } from "@/components/market/TokenLogo";
 import { robinhoodChain } from "@/lib/chain";
@@ -195,6 +196,17 @@ export default async function TokenPage({ params }: Params) {
           initialTimeframe="1h"
         />
       </Card>
+
+      {/* ── Verify ─────────────────────────────────────────────────── */}
+      {/* Directly under the chart, above the figures.
+
+          The question this answers, can I sell this, is asked before any of the
+          numbers below matter: a market cap on a token nobody can exit is not a
+          figure, it is bait. It needs the base token rather than the pool,
+          because the contract with the powers is the token's. */}
+      {pool.baseTokenAddress && (
+        <VerifyPanel token={pool.baseTokenAddress} className="mt-4" />
+      )}
 
       {/* ── Figures ────────────────────────────────────────────────── */}
       <Card className="mt-4 px-5 py-5">

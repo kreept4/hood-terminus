@@ -25,6 +25,12 @@ import {
   UNIVERSAL_ROUTER_ABI,
 } from "@/lib/trade/router";
 import type { Pool } from "@/lib/market/gecko";
+import { useVerify } from "@/components/verify/useVerify";
+import {
+  VerifyBadge,
+  VerifyConfirm,
+  needsConfirm,
+} from "@/components/verify/VerifyBadge";
 
 /**
  * The trade panel.
@@ -175,8 +181,34 @@ export function TradePanel({
     [balanceIn, decimalsIn, side],
   );
 
+  // ── Verify ───────────────────────────────────────────────────────────────
+  /**
+   * The verdict for the token being bought, and the gate in front of a bad one.
+   *
+   * Only on a buy. Selling a token Verify dislikes is the thing somebody should
+   * be doing, and stopping to warn them about it would be absurd.
+   */
+  const { data: verifyReport } = useVerify(
+    side === "buy" ? (pool?.baseTokenAddress ?? undefined) : undefined,
+  );
+  const [confirming, setConfirming] = useState(false);
+
   // ── Execution ────────────────────────────────────────────────────────────
-  async function submit() {
+  /**
+   * Checks the verdict, then either asks or proceeds.
+   *
+   * Split from `execute` so "Buy anyway" can call the second half directly
+   * without coming back through the gate it just passed.
+   */
+  function submit() {
+    if (side === "buy" && needsConfirm(verifyReport)) {
+      setConfirming(true);
+      return;
+    }
+    void execute();
+  }
+
+  async function execute() {
     if (!pool || !quote?.quote || !address) return;
     setError(null);
 
@@ -396,6 +428,14 @@ export function TradePanel({
           </div>
         </div>
 
+        {/* The verdict, beside the button that acts on it. Buys only: nobody
+            needs warning off selling a token Verify dislikes. */}
+        {side === "buy" && pool?.baseTokenAddress && (
+          <div className="mt-4 border-t border-line-soft pt-4">
+            <VerifyBadge token={pool.baseTokenAddress} />
+          </div>
+        )}
+
         <div className="mt-5">
           {isConnected ? (
             <button
@@ -509,6 +549,18 @@ export function TradePanel({
         )}
 
       </Card>
+
+      {confirming && verifyReport && (
+        <VerifyConfirm
+          report={verifyReport}
+          symbol={pool?.symbol ?? "this token"}
+          onCancel={() => setConfirming(false)}
+          onProceed={() => {
+            setConfirming(false);
+            void execute();
+          }}
+        />
+      )}
     </div>
   );
 }
