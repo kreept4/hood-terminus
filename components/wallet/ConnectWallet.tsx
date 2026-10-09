@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence } from "motion/react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
+import { useDisconnectAll } from "@/lib/wallet/disconnect";
 import {
   buildDeepLink,
   fetchMobileWallets,
@@ -80,15 +81,13 @@ export function ConnectWallet({
   const [open, setOpen] = useState(false);
   const { address, isConnected } = useAccount();
   const { connectors, connect, isPending, error, variables } = useConnect();
-  const { disconnect } = useDisconnect();
+  const disconnectAll = useDisconnectAll();
 
   if (isConnected && address) {
     return (
       <AccountMenu
         address={address}
-        onDisconnect={() => {
-          disconnect();
-        }}
+        onDisconnect={() => void disconnectAll()}
         className={className}
       />
     );

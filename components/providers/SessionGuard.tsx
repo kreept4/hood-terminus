@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount } from "wagmi";
+import { useDisconnectAll } from "@/lib/wallet/disconnect";
 
 /**
  * A connected wallet lasts for the session and no longer.
@@ -35,7 +36,7 @@ const MARKER = "ht:session";
 
 export function SessionGuard() {
   const { isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const disconnectAll = useDisconnectAll();
 
   // Once per mount. Without the guard a disconnect would re-run this effect
   // through `isConnected` and fight the user's next reconnect.
@@ -56,8 +57,8 @@ export function SessionGuard() {
     }
 
     decided.current = true;
-    if (fresh && isConnected) disconnect();
-  }, [isConnected, disconnect]);
+    if (fresh && isConnected) void disconnectAll();
+  }, [isConnected, disconnectAll]);
 
   return null;
 }
