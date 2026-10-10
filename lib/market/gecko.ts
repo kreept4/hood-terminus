@@ -379,19 +379,37 @@ export async function getTopPools(pages = 3): Promise<Pool[]> {
 }
 
 export async function getPool(address: string): Promise<Pool | null> {
-  const json = await get<{ data?: RawPool }>(
+  /**
+   * The `included` block is read, not discarded.
+   *
+   * This already asked for `include=base_token`, then called `normalise`
+   * without the images map, so the artwork arrived in the response and was
+   * thrown away. Every token page rendered a monogram while the board beside
+   * it showed the real mark, because the board's fetch does pass the map.
+   */
+  const json = await get<PoolList & { data?: RawPool }>(
     `/networks/${NETWORK}/pools/${address}?include=base_token`,
     15,
   );
-  return json?.data ? normalise(json.data) : null;
+  return json?.data ? normalise(json.data, imagesFrom(json.included)) : null;
 }
 
-/** A pool plus its base token's artwork. One extra cached request. */
+/**
+ * A pool plus its base token's artwork.
+ *
+ * No second request in the ordinary case: `getPool` now carries the logo out
+ * of the same response. The lookup below is a fallback for the pools whose
+ * `included` block genuinely has no token entry, and it is the reason this was
+ * broken for so long: it quietly recovered the artwork often enough to look
+ * like it worked, and failed exactly when the free tier was throttling, which
+ * is when a token page is most likely to be loaded.
+ */
 export async function getPoolWithLogo(
   address: string,
 ): Promise<{ pool: Pool; logo: string | null } | null> {
   const pool = await getPool(address);
   if (!pool) return null;
+  if (pool.imageUrl) return { pool, logo: pool.imageUrl };
   if (!pool.baseTokenAddress) return { pool, logo: null };
 
   const images = await getTokenImages([pool.baseTokenAddress]);
