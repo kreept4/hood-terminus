@@ -32,6 +32,16 @@ export async function GET(request: Request) {
   }
 
   const candles = await getCandles(pool, tf as Timeframe);
+
+  // Not cached, and not an empty array. The chart distinguishes a failed load
+  // from a pair with no history, and only a status it can see lets it.
+  if (candles === null) {
+    return NextResponse.json(
+      { error: "Could not load candles" },
+      { status: 503, headers: { "cache-control": "no-store" } },
+    );
+  }
+
   return NextResponse.json(candles, {
     headers: { "cache-control": "public, s-maxage=20, stale-while-revalidate=60" },
   });

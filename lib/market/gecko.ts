@@ -450,11 +450,21 @@ const TF: Record<Timeframe, { path: string; aggregate: number }> = {
   "1d": { path: "day", aggregate: 1 },
 };
 
+/**
+ * Candles, or null when they could not be fetched.
+ *
+ * The two are different answers and were being collapsed into one. A throttled
+ * upstream produced an empty array, which every caller read as "this pair has
+ * no history for this timeframe" and said so on screen. That is a claim the
+ * data does not support, and it is the more alarming of the two readings: a
+ * trader told a market has no history concludes something about the market,
+ * when the truth was about our rate limit.
+ */
 export async function getCandles(
   poolAddress: string,
   timeframe: Timeframe,
   limit = 300,
-): Promise<Candle[]> {
+): Promise<Candle[] | null> {
   const { path, aggregate } = TF[timeframe];
   const json = await get<{
     data?: { attributes?: { ohlcv_list?: number[][] } };
@@ -462,6 +472,11 @@ export async function getCandles(
     `/networks/${NETWORK}/pools/${poolAddress}/ohlcv/${path}?aggregate=${aggregate}&limit=${limit}`,
     timeframe === "1d" ? 300 : 20,
   );
+
+  // `get` returns null only when the request itself failed, after its retries
+  // and its stale-value fallback. An upstream that answers with no candles
+  // returns a body, so that still reads as a genuine empty.
+  if (json === null) return null;
 
   const list = json?.data?.attributes?.ohlcv_list ?? [];
   return (

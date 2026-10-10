@@ -139,7 +139,11 @@ export default async function TokenPage({ params }: Params) {
       ? getPoolsForToken(pool.baseTokenAddress)
       : Promise.resolve([]),
   ]);
-  const candles = candlesMaybe ?? (await getCandles(pool.address, "1h"));
+  // A null here is a failed fetch, not an empty market. The page renders the
+  // chart empty either way; only the API distinguishes them, for the timeframe
+  // switch, which is the one place somebody is told which it was.
+  const candles =
+    (candlesMaybe ?? (await getCandles(pool.address, "1h"))) ?? [];
 
   const others = markets.filter(
     (m) => m.address.toLowerCase() !== pool.address.toLowerCase(),
