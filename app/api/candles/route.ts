@@ -1,5 +1,6 @@
 import { rateLimit, clientKey, tooManyRequests } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
+import { isPoolId } from "@/lib/market/pool-id";
 import { getCandles, type Timeframe } from "@/lib/market/gecko";
 
 /**
@@ -21,8 +22,10 @@ export async function GET(request: Request) {
   const pool = searchParams.get("pool") ?? "";
   const tf = searchParams.get("tf") ?? "1h";
 
-  if (!/^0x[0-9a-fA-F]{40}$/.test(pool)) {
-    return NextResponse.json({ error: "Invalid pool address" }, { status: 400 });
+  // A v4 pool is a 32 byte id rather than an address, and most pools on this
+  // chain are v4. Checking for an address here rejected every one of them.
+  if (!isPoolId(pool)) {
+    return NextResponse.json({ error: "Invalid pool" }, { status: 400 });
   }
   if (!TIMEFRAMES.includes(tf as Timeframe)) {
     return NextResponse.json({ error: "Invalid timeframe" }, { status: 400 });
