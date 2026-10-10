@@ -240,3 +240,18 @@ at 45.6px of type and 690px of text in a 776px column, 54px clear. The three
 trade cases checked against live pools: `USDG / WETH 0.01%` on uniswap-v3 offers
 the button, `CRH / WETH` on Pons and `AAPL / USDG` on uniswap-v4 name their venue
 instead. The creator share dry run reports the chain is already at 80/20.
+
+## Go-live corrections
+
+**Date:** October 10, 2026
+
+The creator's share is read from the chain everywhere it is claimed: the review
+panel on the create form named a fraction while the contract paid 60 and now
+pays 80, and the fallback constant is in step with the live value so the moment
+before the read lands does not show a different number from the one replacing
+it. Timeframe buttons did nothing on v4 tokens, which is most of this chain:
+`/api/candles` validated the pool as a 20 byte address and a v4 pool is a 32
+byte id, so every request was rejected, while the first candles arrived from the
+server and masked it. The settings icon was absent because it was written as a
+bare `svg` on a 24 unit grid against this file's 16; it is a gear now, generated
+by `design/gear.py` because teeth at equal angles cannot be eyeballed at 17px.

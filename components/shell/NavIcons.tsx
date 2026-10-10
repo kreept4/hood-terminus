@@ -144,13 +144,21 @@ export function IconTrack({ className }: IconProps) {
   );
 }
 
-/** Settings: sliders, because these are levels rather than switches. */
+/**
+ * Settings: a gear, generated rather than drawn.
+ *
+ * The rest of this set is a few straight strokes, which can be eyeballed. A
+ * gear cannot: its teeth have to sit at equal angles with matching flanks, and
+ * a hand written path gets that subtly wrong in a way that reads as wobble at
+ * 17px. `design/gear.py` computes the outline, so the shape is a consequence
+ * of six numbers rather than of my patience. Re-run it to change the tooth
+ * count or depth; do not edit the path by hand.
+ */
 export function IconSettings({ className }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-      <circle cx="16" cy="7" r="2" />
-      <circle cx="10" cy="17" r="2" />
-    </svg>
+    <Svg className={className}>
+      <path d="M6.21 3.33L6.76 1.62L9.24 1.62L9.79 3.33L10.03 3.43L11.63 2.61L13.39 4.37L12.57 5.97L12.67 6.21L14.38 6.76L14.38 9.24L12.67 9.79L12.57 10.03L13.39 11.63L11.63 13.39L10.03 12.57L9.79 12.67L9.24 14.38L6.76 14.38L6.21 12.67L5.97 12.57L4.37 13.39L2.61 11.63L3.43 10.03L3.33 9.79L1.62 9.24L1.62 6.76L3.33 6.21L3.43 5.97L2.61 4.37L4.37 2.61L5.97 3.43Z" />
+      <path d="M5.70 8.00A2.30 2.30 0 0 1 10.30 8.00A2.30 2.30 0 0 1 5.70 8.00Z" />
+    </Svg>
   );
 }

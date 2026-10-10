@@ -673,12 +673,16 @@ export function CreateForm() {
             )}
             <Row label="Chain" value="Robinhood Chain" />
             <Row label="Paired with" value={quoteAsset(quote).symbol} mono />
+            {/* Read from the chain, not written down. This row named a
+                fraction while the contract paid 60 and now pays 80, which is
+                the exact failure the rest of this form was already corrected
+                for: a figure nobody updates when the owner moves it. */}
             <Row
               label="Your rewards"
               value={
                 taxBpsFrom(creatorTax) === 0
-                  ? "Half the trade fee"
-                  : `${taxBpsFrom(creatorTax) / 100}% + half the trade fee`
+                  ? `${creatorSharePercent}% of the trade fee`
+                  : `${taxBpsFrom(creatorTax) / 100}% + ${creatorSharePercent}% of the trade fee`
               }
             />
           </dl>

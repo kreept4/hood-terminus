@@ -134,13 +134,16 @@ export function quoteAsset(address: string): QuoteAsset {
 export const MAX_CREATOR_TAX_PERCENT = 9;
 
 /**
- * The creator's share of the 1% trade fee, as the contract ships it.
+ * The creator's share of the 1% trade fee, as the chain is currently set.
  *
  * Only a fallback for the moment before the chain answers. The live figure is
  * read from `creatorShareBps`, because the owner can move it and this file
- * cannot know that they have.
+ * cannot know that they have. It is kept in step with the live value so the
+ * flash before the read lands is not a different number from the one that
+ * replaces it, which is worse than showing nothing: somebody reads 60, blinks,
+ * and sees 80, and now neither figure is trustworthy.
  */
-export const DEFAULT_CREATOR_SHARE_PERCENT = 60;
+export const DEFAULT_CREATOR_SHARE_PERCENT = 80;
 
 /**
  * Marks we trust more than the market feed's, keyed by token address.
